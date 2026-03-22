@@ -1,0 +1,10 @@
+
+> jk-compy-erms@1.0.0 dev:server
+> npm --workspace server run dev
+
+
+> erms-server@1.0.0 dev
+> node --watch src/index.js
+
+ERMS API listening on http://localhost:4000
+^C^C^C
