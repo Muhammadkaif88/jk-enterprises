@@ -11,6 +11,7 @@ import { staffTrackingRouter } from "./routes/staffTracking.js";
 import { companiesRouter } from "./routes/companies.js";
 import { tasksRouter } from "./routes/tasks.js";
 import { billingRouter } from "./routes/billing.js";
+import { investmentsRouter } from "./routes/investments.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -34,6 +35,7 @@ app.use("/api/staff-tracking", staffTrackingRouter);
 app.use("/api/companies", companiesRouter);
 app.use("/api/tasks", tasksRouter);
 app.use("/api/billing", billingRouter);
+app.use("/api/investments", investmentsRouter);
 
 app.listen(port, () => {
   console.log(`ERMS API listening on http://localhost:${port}`);

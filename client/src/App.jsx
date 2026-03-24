@@ -5,6 +5,7 @@ const sections = [
   { id: "overview", icon: "OV", label: "Overview" },
   { id: "inventory", icon: "IN", label: "Components" },
   { id: "finance", icon: "AC", label: "Accounting" },
+  { id: "investments", icon: "IV", label: "Investment" },
   { id: "billing", icon: "BL", label: "Billing" },
   { id: "projects", icon: "PR", label: "Projects" },
   { id: "notes", icon: "ID", label: "Idea Lab" },
@@ -25,9 +26,9 @@ const staffRoleOptions = [
 
 const sectionAccessByRole = {
   admin: sections.map((section) => section.id),
-  manager: ["inventory", "finance", "billing", "projects", "notes", "team", "staffTracking", "tasks"],
-  "Account Staff": ["inventory", "finance", "billing", "staffTracking", "tasks"],
-  Accountant: ["inventory", "finance", "billing", "staffTracking", "tasks"],
+  manager: ["inventory", "finance", "investments", "billing", "projects", "notes", "team", "staffTracking", "tasks"],
+  "Account Staff": ["inventory", "finance", "investments", "billing", "staffTracking", "tasks"],
+  Accountant: ["inventory", "finance", "investments", "billing", "staffTracking", "tasks"],
   Trainer: ["inventory", "projects", "notes", "team", "staffTracking", "tasks"],
   Freelancer: ["inventory", "projects", "notes", "team", "tasks"],
   Internship: ["projects", "notes", "team", "staffTracking", "tasks"],
@@ -372,6 +373,7 @@ export default function App() {
   const [finance, setFinance] = useState([]);
   const [financeSummary, setFinanceSummary] = useState(null);
   const [financeSearchDate, setFinanceSearchDate] = useState("");
+  const [investments, setInvestments] = useState([]);
   const [billing, setBilling] = useState([]);
   const [billingLines, setBillingLines] = useState([{ inventoryId: "", description: "", qty: 1, price: 0 }]);
   const [inventorySearch, setInventorySearch] = useState("");
@@ -406,10 +408,19 @@ export default function App() {
     ? companies
     : companies.filter((company) => Number(company.id) === Number(user?.companyId));
   const showCompanyColumn = selectedCompany === "all";
+  const selectedCompanyInfo = useMemo(
+    () => companies.find((entry) => Number(entry.id) === Number(selectedCompany)) || null,
+    [companies, selectedCompany]
+  );
+  const hiddenSectionsByCompanyCode = {
+    "qisa-cafe": new Set(["inventory", "billing", "projects"])
+  };
+  const hiddenSectionIds = selectedCompanyInfo?.code ? hiddenSectionsByCompanyCode[selectedCompanyInfo.code] || new Set() : new Set();
   const companyScopedSections = new Set(["inventory", "finance", "billing", "projects", "staffTracking", "tasks"]);
   const visibleSections = sections.filter(
     (section) =>
       allowedSectionIds.has(section.id) &&
+      !hiddenSectionIds.has(section.id) &&
       (isAdmin || section.id !== "overview") &&
       (selectedCompany !== "all" || !companyScopedSections.has(section.id))
   );
@@ -515,17 +526,20 @@ export default function App() {
       setTasks(baseRequests[10]);
 
       if (["admin", "manager"].includes(requestRole)) {
-        const [financeRows, financeTotals, billingRows] = await Promise.all([
+        const [financeRows, financeTotals, investmentRows, billingRows] = await Promise.all([
           api("/finance"),
           api("/finance/summary"),
+          api("/investments"),
           api("/billing")
         ]);
         setFinance(financeRows);
         setFinanceSummary(financeTotals);
+        setInvestments(investmentRows);
         setBilling(billingRows);
       } else {
         setFinance([]);
         setFinanceSummary(null);
+        setInvestments([]);
         setBilling([]);
       }
 
@@ -631,10 +645,6 @@ export default function App() {
 
   const restrictedFinance = !["admin", "manager"].includes(requestRole);
   const canManageTasks = role === "admin" || role === "manager";
-  const selectedCompanyInfo = useMemo(
-    () => companies.find((entry) => Number(entry.id) === Number(selectedCompany)) || null,
-    [companies, selectedCompany]
-  );
   const filteredInventory = useMemo(() => {
     const query = inventorySearch.trim().toLowerCase();
     if (!query) {
@@ -665,6 +675,15 @@ export default function App() {
       return entryDate === financeSearchDate;
     });
   }, [finance, financeSearchDate]);
+  const investmentSummary = useMemo(() => {
+    const invested = investments.reduce((sum, entry) => sum + Number(entry.investedFund || 0), 0);
+    const returned = investments.reduce((sum, entry) => sum + Number(entry.returnedFund || 0), 0);
+    return {
+      invested,
+      returned,
+      balance: invested - returned
+    };
+  }, [investments]);
   const taskColumns = [
     ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
     { key: "title", label: "Task" },
@@ -1317,6 +1336,75 @@ export default function App() {
                   canEdit={role !== "technician"}
                   onEdit={(data) => handleAction("PUT", `/finance/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/finance/${id}`)}
+                />
+              </SectionCard>
+            </div>
+          )
+        ) : null}
+
+        {activeSection === "investments" ? (
+          restrictedFinance ? (
+            <SectionCard title="Investment Desk" kicker="Restricted">
+              <p className="muted-copy">Manager, admin, or account staff access is required for investor fund tracking.</p>
+            </SectionCard>
+          ) : (
+            <div className="section-stack">
+              <section className="stat-grid">
+                <div className="stat-card">
+                  <span>Total Invested</span>
+                  <strong>{currency(investmentSummary.invested)}</strong>
+                </div>
+                <div className="stat-card">
+                  <span>Total Returned</span>
+                  <strong>{currency(investmentSummary.returned)}</strong>
+                </div>
+                <div className="stat-card accent">
+                  <span>Outstanding Balance</span>
+                  <strong>{currency(investmentSummary.balance)}</strong>
+                </div>
+              </section>
+
+              <SectionCard title="Investment Desk" kicker="Investor fund and return tracking">
+                <form
+                  className="form-grid"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const data = Object.fromEntries(new FormData(event.target));
+                    handleAction("POST", "/investments", withSelectedCompany(data));
+                    event.target.reset();
+                  }}
+                >
+                  <input name="investorName" placeholder="Investor name" required />
+                  <input name="contactNumber" placeholder="Contact number" />
+                  <input name="investedDate" type="date" required />
+                  <input name="investedFund" type="number" placeholder="Invested fund" required />
+                  <input name="returnDate" type="date" />
+                  <input name="returnedFund" type="number" placeholder="Returned fund" />
+                  <input name="notes" placeholder="Investment notes" className="wide" />
+                  <button type="submit">Add Investment</button>
+                </form>
+
+                <DataTable
+                  columns={[
+                    ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
+                    { key: "investorName", label: "Investor" },
+                    { key: "contactNumber", label: "Phone" },
+                    { key: "investedDate", label: "Invested Date" },
+                    { key: "investedFund", label: "Invested Fund", type: "number", render: (row) => currency(row.investedFund) },
+                    { key: "returnDate", label: "Return Date" },
+                    { key: "returnedFund", label: "Returned Fund", type: "number", render: (row) => currency(row.returnedFund) },
+                    {
+                      key: "balance",
+                      label: "Balance",
+                      editable: false,
+                      render: (row) => currency(Number(row.investedFund || 0) - Number(row.returnedFund || 0))
+                    },
+                    { key: "notes", label: "Details" }
+                  ]}
+                  rows={investments}
+                  canEdit={!restrictedFinance}
+                  onEdit={(data) => handleAction("PUT", `/investments/${data.id}`, data)}
+                  onDelete={(id) => handleAction("DELETE", `/investments/${id}`)}
                 />
               </SectionCard>
             </div>

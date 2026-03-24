@@ -331,6 +331,20 @@ const seedData = {
       dueDate: "2026-03-27"
     }
   ],
+  investments: [
+    {
+      id: 1,
+      companyId: 3,
+      companyName: "Qisa Cafe",
+      investorName: "Cafe Growth Partner",
+      contactNumber: "+91 90000 11111",
+      investedFund: 250000,
+      returnedFund: 40000,
+      investedDate: "2026-02-10",
+      returnDate: "2026-03-20",
+      notes: "Initial seating and kitchen setup investment."
+    }
+  ],
   users: [
     {
       id: 1,
@@ -504,6 +518,18 @@ function normalizeUser(user) {
   };
 }
 
+function normalizeInvestment(entry) {
+  return withCompany({
+    contactNumber: "",
+    investedFund: 0,
+    returnedFund: 0,
+    investedDate: "",
+    returnDate: "",
+    notes: "",
+    ...entry
+  });
+}
+
 function normalizeDb(data) {
   currentCompanies = data.companies || seedData.companies;
   return {
@@ -520,6 +546,7 @@ function normalizeDb(data) {
     complaints: (data.complaints || seedData.complaints).map((entry) => withCompany(entry)),
     tasks: (data.tasks || seedData.tasks).map(normalizeTask),
     billing: (data.billing || seedData.billing).map(normalizeBillingEntry),
+    investments: (data.investments || seedData.investments).map(normalizeInvestment),
     users: (data.users || seedData.users).map(normalizeUser)
   };
 }
