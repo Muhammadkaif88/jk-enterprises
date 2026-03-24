@@ -33,7 +33,7 @@ function resolveApprovalProfile(profile) {
 authRouter.post("/register", (req, res) => {
   const db = readDb();
   if (!db.users) db.users = [];
-  const { email, password, fullName } = req.body;
+  const { email, password, fullName, phone } = req.body;
 
   if (db.users.find((u) => u.email === email)) {
     return res.status(400).json({ message: "User already exists." });
@@ -44,6 +44,7 @@ authRouter.post("/register", (req, res) => {
     email,
     password, // Store as is or hash if needed. The user's request is simple.
     fullName,
+    phone: phone || "",
     role: "",
     staffCategory: "",
     companyId: null,
@@ -119,6 +120,7 @@ authRouter.post("/pending/:id/approve", authorize("admin"), (req, res) => {
   user.companyName = company.name;
   user.role = accessProfile.role;
   user.staffCategory = accessProfile.staffCategory;
+  user.phone = req.body.phone || user.phone || "";
 
   const existingStaffProfile = db.staff.find((entry) => entry.email === user.email);
   if (existingStaffProfile) {
@@ -127,6 +129,7 @@ authRouter.post("/pending/:id/approve", authorize("admin"), (req, res) => {
       companyName: company.name,
       fullName: user.fullName,
       email: user.email,
+      phone: user.phone || existingStaffProfile.phone || "",
       role: user.role,
       staffCategory: user.staffCategory
     });
@@ -137,6 +140,7 @@ authRouter.post("/pending/:id/approve", authorize("admin"), (req, res) => {
       companyName: company.name,
       fullName: user.fullName,
       email: user.email,
+      phone: user.phone || "",
       role: user.role,
       staffCategory: user.staffCategory,
       expertise: "",

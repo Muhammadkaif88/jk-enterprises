@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 const sections = [
@@ -330,6 +330,7 @@ function AuthScreen({ onLogin }) {
         <form className="auth-form" onSubmit={handleSubmit}>
           {!isLogin ? <input name="fullName" placeholder="Full Name" required /> : null}
           <input name="email" type="email" placeholder="Email Address" required />
+          {!isLogin ? <input name="phone" type="tel" placeholder="Phone Number" required /> : null}
           <input name="password" type="password" placeholder="Password" required />
           <button type="submit" className="btn-primary">
             {isLogin ? "Log In" : "Sign Up"}
@@ -372,6 +373,7 @@ export default function App() {
   const [financeSummary, setFinanceSummary] = useState(null);
   const [billing, setBilling] = useState([]);
   const [billingLines, setBillingLines] = useState([{ inventoryId: "", description: "", qty: 1, price: 0 }]);
+  const [inventorySearch, setInventorySearch] = useState("");
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [projectSearch, setProjectSearch] = useState("");
@@ -388,6 +390,7 @@ export default function App() {
     summary: null
   });
   const [message, setMessage] = useState("");
+  const refreshInFlight = useRef(false);
 
   const role = user?.role || "guest";
   const staffCategory = user?.staffCategory || "";
@@ -434,8 +437,13 @@ export default function App() {
     if (!path.startsWith("/auth") && path !== "/companies") {
       url.searchParams.set("companyId", selectedCompany);
     }
+    const method = String(options.method || "GET").toUpperCase();
+    if (method === "GET") {
+      url.searchParams.set("_ts", String(Date.now()));
+    }
 
     const response = await fetch(url, {
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -449,16 +457,32 @@ export default function App() {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Request failed." }));
+      if (
+        (response.status === 401 || response.status === 403) &&
+        /log in again|removed|session/i.test(String(error.message || ""))
+      ) {
+        setUser(null);
+        setToken(null);
+        setSelectedCompany("all");
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
       throw new Error(error.message || "Request failed.");
     }
 
     return response.status === 204 ? null : response.json();
   }
 
-  async function refreshAll() {
+  async function refreshAll(force = false) {
     if (!token) {
       return;
     }
+
+    if (refreshInFlight.current && !force) {
+      return;
+    }
+
+    refreshInFlight.current = true;
 
     try {
       const baseRequests = await Promise.all([
@@ -513,12 +537,43 @@ export default function App() {
       setMessage("");
     } catch (error) {
       setMessage(error.message);
+    } finally {
+      refreshInFlight.current = false;
     }
   }
 
   useEffect(() => {
-    refreshAll();
+    refreshAll(true);
   }, [requestRole, role, selectedCompany, token]);
+
+  useEffect(() => {
+    if (!token) {
+      return undefined;
+    }
+
+    const pollId = window.setInterval(() => {
+      refreshAll();
+    }, 5000);
+
+    const handleFocusRefresh = () => {
+      refreshAll(true);
+    };
+
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === "visible") {
+        refreshAll(true);
+      }
+    };
+
+    window.addEventListener("focus", handleFocusRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityRefresh);
+
+    return () => {
+      window.clearInterval(pollId);
+      window.removeEventListener("focus", handleFocusRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityRefresh);
+    };
+  }, [requestRole, selectedCompany, token]);
 
   useEffect(() => {
     if (!isAdmin && user?.companyId && selectedCompany !== String(user.companyId)) {
@@ -579,6 +634,26 @@ export default function App() {
     () => companies.find((entry) => Number(entry.id) === Number(selectedCompany)) || null,
     [companies, selectedCompany]
   );
+  const filteredInventory = useMemo(() => {
+    const query = inventorySearch.trim().toLowerCase();
+    if (!query) {
+      return inventory;
+    }
+
+    return inventory.filter((item) =>
+      [
+        item.partName,
+        item.category,
+        item.partValue,
+        item.packageType,
+        item.supplier,
+        item.datasheetUrl
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [inventory, inventorySearch]);
   const taskColumns = [
     ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
     { key: "title", label: "Task" },
@@ -918,7 +993,7 @@ export default function App() {
         method,
         body: payload ? JSON.stringify(payload) : undefined
       });
-      await refreshAll();
+      await refreshAll(true);
       return result;
     } catch (error) {
       setMessage(error.message);
@@ -1095,7 +1170,7 @@ export default function App() {
         ) : null}
 
         {activeSection === "inventory" ? (
-          <SectionCard title="Component Registry" kicker="Electronics inventory">
+          <SectionCard title="Stock Management" kicker="Inventory Dashboard">
             <form
               className="form-grid"
               onSubmit={(event) => {
@@ -1113,6 +1188,14 @@ export default function App() {
               <input name="unitCost" type="number" placeholder="Unit cost" required />
               <button type="submit">Add Component</button>
             </form>
+
+            <div className="inventory-toolbar">
+              <input
+                value={inventorySearch}
+                onChange={(event) => setInventorySearch(event.target.value)}
+                placeholder="Search stock item, category, value, package, supplier"
+              />
+            </div>
 
             <div className="inventory-alert-grid">
               {inventory.filter((item) => Number(item.stockQty) <= Number(item.lowStockThreshold || 0)).length ? (
@@ -1145,7 +1228,7 @@ export default function App() {
                 },
                 { key: "unitCost", label: "Unit Cost", type: "number", render: (row) => currency(row.unitCost) }
               ]}
-              rows={inventory}
+              rows={filteredInventory}
               canEdit={role !== "technician"}
               onEdit={(data) => handleAction("PUT", `/inventory/${data.id}`, data)}
               onDelete={(id) => handleAction("DELETE", `/inventory/${id}`)}
@@ -1812,6 +1895,8 @@ export default function App() {
                 >
                   <input name="fullName" placeholder="Full name" required />
                   <input name="email" type="email" placeholder="Email" required />
+                  <input name="phone" type="tel" placeholder="Phone number" required />
+                  <input name="password" type="password" placeholder="Login password" required />
                   <select name="role" defaultValue="technician">
                     {teamRoleOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1837,6 +1922,7 @@ export default function App() {
                   ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
                   { key: "fullName", label: "Name" },
                   { key: "email", label: "Email" },
+                  { key: "phone", label: "Phone" },
                   { key: "role", label: "Role", options: teamRoleOptions },
                   { key: "staffCategory", label: "Category", options: employeeCategoryOptions },
                   { key: "attendanceStatus", label: "Current Status", options: attendanceStatusOptions }

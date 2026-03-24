@@ -472,6 +472,7 @@ function normalizeBillingEntry(entry) {
 function normalizeStaff(entry) {
   return withCompany({
     staffCategory: "",
+    phone: "",
     ...entry
   });
 }
@@ -480,6 +481,7 @@ function normalizeUser(user) {
   const baseUser = {
     approvalStatus: "approved",
     staffCategory: "",
+    phone: "",
     approvedAt: null,
     approvedBy: null,
     rejectedAt: null,

@@ -643,6 +643,14 @@ button {
   margin-bottom: 16px;
 }
 
+.inventory-toolbar {
+  margin: 16px 0;
+}
+
+.inventory-toolbar input {
+  width: min(100%, 420px);
+}
+
 .inventory-alert-card {
   display: flex;
   justify-content: space-between;
@@ -1349,6 +1357,209 @@ th {
 .auth-form {
   display: grid;
   gap: 16px;
+}
+
+.auth-form input,
+.auth-form select,
+.auth-form textarea {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    padding: 20px 16px;
+    gap: 18px;
+  }
+
+  .nav-list {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    margin-top: 20px;
+  }
+
+  .sidebar-footer {
+    margin-top: 0;
+  }
+
+  .main-area {
+    padding: 18px;
+  }
+
+  .topbar,
+  .topbar-controls,
+  .employee-page-head,
+  .chart-labels,
+  .billing-card-head,
+  .billing-meta-grid,
+  .billing-summary div,
+  .snapshot-row,
+  .project-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .task-topbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .weekly-bars {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .weekly-bar-frame {
+    min-height: 160px;
+  }
+
+  .project-document {
+    padding: 18px;
+  }
+
+  .payment-method-box,
+  .billing-summary {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .payment-lines div {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-task-grid,
+  .project-card-grid,
+  .approval-card-grid,
+  .project-file-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-area {
+    padding: 14px;
+  }
+
+  .panel,
+  .analytics-card,
+  .billing-card,
+  .task-column,
+  .project-document,
+  .auth-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-card strong {
+    font-size: 22px;
+  }
+
+  .topbar h2,
+  .panel h2 {
+    line-height: 1.15;
+  }
+
+  .brand-logo,
+  .brand-logo svg {
+    width: 52px;
+    height: 52px;
+  }
+
+  .nav-list {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .nav-item {
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+  }
+
+  .project-toolbar,
+  .billing-line-head,
+  .task-card-top,
+  .task-card-actions,
+  .approval-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .task-view-btn,
+  .project-open-btn,
+  .project-close-btn,
+  .employee-back-btn,
+  .print-btn {
+    width: 100%;
+  }
+
+  .task-form-card,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .wide {
+    grid-column: span 1;
+  }
+
+  .inventory-toolbar input,
+  .project-search {
+    width: 100%;
+  }
+
+  .employee-launcher-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-launcher-card {
+    padding: 16px;
+  }
+
+  .employee-launcher-head strong {
+    font-size: 20px;
+  }
+
+  .task-board {
+    grid-template-columns: 1fr;
+  }
+
+  .task-column {
+    padding: 14px;
+  }
+
+  .employee-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 720px;
+  }
+
+  th,
+  td {
+    padding: 12px 8px;
+    font-size: 14px;
+  }
+
+  .auth-card {
+    padding: 24px 18px;
+  }
+
+  .auth-card h1 {
+    font-size: 26px;
+  }
 }
 
 .auth-form input {
