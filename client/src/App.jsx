@@ -50,6 +50,26 @@ const approvalAccessOptions = [
   { value: "Freelancer", label: "Freelancer" },
   { value: "manager", label: "Manager" }
 ];
+const teamRoleOptions = [
+  { value: "technician", label: "Employee" },
+  { value: "manager", label: "Manager" },
+  { value: "admin", label: "Admin" }
+];
+const employeeCategoryOptions = [
+  { value: "Accountant", label: "Accountant" },
+  { value: "Trainer", label: "Trainer" },
+  { value: "Internship", label: "Internship" },
+  { value: "Robotic Engineer", label: "Robotic Engineer" },
+  { value: "Freelancer", label: "Freelancer" },
+  { value: "Manager", label: "Manager" }
+];
+const attendanceStatusOptions = [
+  { value: "Pending Assignment", label: "Pending Assignment" },
+  { value: "Present", label: "Present" },
+  { value: "Late", label: "Late" },
+  { value: "Absent", label: "Absent" },
+  { value: "Leave", label: "Leave" }
+];
 
 function currency(value) {
   return new Intl.NumberFormat("en-IN", {
@@ -212,12 +232,26 @@ function DataTable({ columns, rows, onEdit, onDelete, canEdit }) {
                 {columns.map((column) => (
                   <td key={column.key}>
                     {editingId === row.id && column.editable !== false ? (
-                      <input
-                        className="edit-input"
-                        value={editData[column.key] ?? ""}
-                        onChange={(event) => setEditData({ ...editData, [column.key]: event.target.value })}
-                        type={column.type || "text"}
-                      />
+                      column.options ? (
+                        <select
+                          className="edit-input"
+                          value={editData[column.key] ?? ""}
+                          onChange={(event) => setEditData({ ...editData, [column.key]: event.target.value })}
+                        >
+                          {column.options.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          className="edit-input"
+                          value={editData[column.key] ?? ""}
+                          onChange={(event) => setEditData({ ...editData, [column.key]: event.target.value })}
+                          type={column.type || "text"}
+                        />
+                      )
                     ) : column.render ? (
                       column.render(row)
                     ) : (
@@ -1704,14 +1738,16 @@ export default function App() {
                 <input name="fullName" placeholder="Full name" required />
                 <input name="email" type="email" placeholder="Email" required />
                 <select name="role" defaultValue="technician">
-                  <option value="technician">Technician</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
+                  {teamRoleOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
                 <select name="staffCategory" defaultValue="Trainer">
-                  {staffCategoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
+                  {employeeCategoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
@@ -1723,9 +1759,9 @@ export default function App() {
                   ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
                   { key: "fullName", label: "Name" },
                   { key: "email", label: "Email" },
-                  { key: "role", label: "Role" },
-                  { key: "staffCategory", label: "Category" },
-                  { key: "attendanceStatus", label: "Current Status" }
+                  { key: "role", label: "Role", options: teamRoleOptions },
+                  { key: "staffCategory", label: "Category", options: employeeCategoryOptions },
+                  { key: "attendanceStatus", label: "Current Status", options: attendanceStatusOptions }
                 ]}
                 rows={team}
                 canEdit={role === "admin"}

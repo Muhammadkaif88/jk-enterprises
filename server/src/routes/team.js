@@ -40,6 +40,7 @@ teamRouter.put("/:id", authorize("manager"), (req, res) => {
   if (!member) {
     return res.status(404).json({ message: "Staff member not found." });
   }
+  const previousEmail = member.email;
   Object.assign(member, {
     fullName: req.body.fullName ?? member.fullName,
     email: req.body.email ?? member.email,
@@ -50,6 +51,19 @@ teamRouter.put("/:id", authorize("manager"), (req, res) => {
     assignedTask: req.body.assignedTask ?? member.assignedTask,
     salary: req.body.salary !== undefined ? Number(req.body.salary) : member.salary
   });
+
+  const linkedUser = db.users.find(
+    (entry) => entry.email === previousEmail || entry.email === member.email
+  );
+  if (linkedUser) {
+    Object.assign(linkedUser, {
+      fullName: member.fullName,
+      email: member.email,
+      role: member.role,
+      staffCategory: member.staffCategory
+    });
+  }
+
   writeDb(db);
   res.json(member);
 });
