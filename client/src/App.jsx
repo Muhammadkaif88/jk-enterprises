@@ -392,6 +392,7 @@ export default function App() {
   const role = user?.role || "guest";
   const staffCategory = user?.staffCategory || "";
   const isAdmin = role === "admin";
+  const canManagePeople = ["admin", "manager"].includes(role);
   const requestRole = !isAdmin && staffCategory === "Account Staff" ? "manager" : role;
   const allowedSectionIds = new Set(
     sectionAccessByRole[isAdmin ? "admin" : role === "manager" ? "manager" : staffCategory || "technician"] ||
@@ -408,6 +409,25 @@ export default function App() {
       (isAdmin || section.id !== "overview") &&
       (selectedCompany !== "all" || !companyScopedSections.has(section.id))
   );
+  const currentStaffMember = useMemo(
+    () =>
+      team.find(
+        (member) =>
+          member.email === user?.email ||
+          (member.fullName === user?.fullName && Number(member.companyId) === Number(user?.companyId))
+      ) || null,
+    [team, user?.companyId, user?.email, user?.fullName]
+  );
+  const currentStaffName = currentStaffMember?.fullName || user?.fullName || "";
+  const visibleAttendanceRows = canManagePeople
+    ? staffTracking.attendance
+    : staffTracking.attendance.filter((entry) => Number(entry.staffId) === Number(currentStaffMember?.id));
+  const visibleDoubtRows = canManagePeople
+    ? staffTracking.doubts
+    : staffTracking.doubts.filter((entry) => Number(entry.staffId) === Number(currentStaffMember?.id));
+  const visibleComplaintRows = canManagePeople
+    ? staffTracking.complaints
+    : staffTracking.complaints.filter((entry) => Number(entry.staffId) === Number(currentStaffMember?.id));
 
   async function api(path, options = {}) {
     const url = new URL(`${API_URL}${path}`);
@@ -421,7 +441,8 @@ export default function App() {
         Authorization: `Bearer ${token}`,
         "x-role": requestRole,
         "x-company-id": selectedCompany,
-        "x-user-name": user?.fullName || ""
+        "x-user-name": user?.fullName || "",
+        "x-user-email": user?.email || ""
       },
       ...options
     });
@@ -745,6 +766,22 @@ export default function App() {
     return selectedCompany === "all" ? data : { ...data, companyId: Number(selectedCompany) };
   }
 
+  function withCurrentStaff(data) {
+    if (canManagePeople) {
+      return data;
+    }
+
+    if (!currentStaffMember?.id) {
+      setMessage("This account does not have a linked staff profile yet.");
+      return null;
+    }
+
+    return {
+      ...data,
+      staffId: currentStaffMember.id
+    };
+  }
+
   function updateBillingLine(index, key, value) {
     setBillingLines((current) =>
       current.map((line, lineIndex) => (lineIndex === index ? { ...line, [key]: value } : line))
@@ -887,6 +924,43 @@ export default function App() {
       setMessage(error.message);
       return null;
     }
+  }
+
+  function renderEmployeeTaskCard(task) {
+    return (
+      <article key={task.id} className="task-card">
+        <div className="task-card-top">
+          <strong>{task.title}</strong>
+          <span className={`task-priority task-priority-${String(task.priority).toLowerCase()}`}>{task.priority}</span>
+        </div>
+        <p className="task-meta">Staff: {task.assigneeNames || task.assigneeName || "Unassigned"}</p>
+        <p className="task-meta">Project: {task.projectName || "No project linked"}</p>
+        <p className="task-meta">Status: {task.status}</p>
+        <p className="task-meta">Start: {task.startDate || "Not set"}</p>
+        <p className="task-meta">Due: {task.dueDate || "No due date"}</p>
+        <p className="task-copy">{task.description || "No description provided."}</p>
+        <div className="task-card-actions">
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={task.status !== "todo"}
+            onClick={() => handleAction("PUT", `/tasks/${task.id}`, { status: "in-progress" })}
+          >
+            In Progress
+          </button>
+          <button
+            type="button"
+            className="save-row-btn"
+            disabled={!["in-progress", "review"].includes(task.status)}
+            onClick={() => handleAction("PUT", `/tasks/${task.id}`, { status: "review" })}
+          >
+            Review
+          </button>
+        </div>
+        {task.status === "review" ? <p className="task-meta">Waiting for admin approval.</p> : null}
+        {task.status === "done" ? <p className="task-meta">Approved complete.</p> : null}
+      </article>
+    );
   }
 
   if (!token) {
@@ -1726,33 +1800,37 @@ export default function App() {
             ) : null}
 
             <SectionCard title="Team Control" kicker="Staff management">
-              <form
-                className="form-grid"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const data = Object.fromEntries(new FormData(event.target));
-                  handleAction("POST", "/team", withSelectedCompany(data));
-                  event.target.reset();
-                }}
-              >
-                <input name="fullName" placeholder="Full name" required />
-                <input name="email" type="email" placeholder="Email" required />
-                <select name="role" defaultValue="technician">
-                  {teamRoleOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select name="staffCategory" defaultValue="Trainer">
-                  {employeeCategoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <button type="submit">Add Staff</button>
-              </form>
+              {isAdmin ? (
+                <form
+                  className="form-grid"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const data = Object.fromEntries(new FormData(event.target));
+                    handleAction("POST", "/team", withSelectedCompany(data));
+                    event.target.reset();
+                  }}
+                >
+                  <input name="fullName" placeholder="Full name" required />
+                  <input name="email" type="email" placeholder="Email" required />
+                  <select name="role" defaultValue="technician">
+                    {teamRoleOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select name="staffCategory" defaultValue="Trainer">
+                    {employeeCategoryOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="submit">Add Staff</button>
+                </form>
+              ) : (
+                <div className="task-empty">Team details are view-only for employee accounts.</div>
+              )}
 
               <DataTable
                 columns={[
@@ -1774,7 +1852,7 @@ export default function App() {
 
         {activeSection === "staffTracking" ? (
           <div className="section-stack">
-            {staffTracking.summary ? (
+            {staffTracking.summary && canManagePeople ? (
               <section className="stat-grid">
                 <div className="stat-card">
                   <span>Attendance Logged Today</span>
@@ -1831,12 +1909,19 @@ export default function App() {
                   className="form-grid"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    const data = Object.fromEntries(new FormData(event.target));
-                    handleAction("POST", "/staff-tracking/attendance", withSelectedCompany(data));
+                    const data = withCurrentStaff(withSelectedCompany(Object.fromEntries(new FormData(event.target))));
+                    if (!data) {
+                      return;
+                    }
+                    handleAction("POST", "/staff-tracking/attendance", data);
                     event.target.reset();
                   }}
                 >
-                  <StaffSelect name="staffId" team={team} />
+                  {canManagePeople ? (
+                    <StaffSelect name="staffId" team={team} />
+                  ) : (
+                    <input value={currentStaffName} readOnly />
+                  )}
                   <input name="date" type="date" required />
                   <select name="status" defaultValue="Present">
                     <option value="Present">Present</option>
@@ -1859,7 +1944,7 @@ export default function App() {
                     { key: "checkIn", label: "In" },
                     { key: "checkOut", label: "Out" }
                   ]}
-                  rows={staffTracking.attendance}
+                  rows={visibleAttendanceRows}
                   canEdit={role !== "technician"}
                   onEdit={(data) => handleAction("PUT", `/staff-tracking/attendance/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/staff-tracking/attendance/${id}`)}
@@ -1873,12 +1958,19 @@ export default function App() {
                   className="form-grid"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    const data = Object.fromEntries(new FormData(event.target));
-                    handleAction("POST", "/staff-tracking/doubts", withSelectedCompany(data));
+                    const data = withCurrentStaff(withSelectedCompany(Object.fromEntries(new FormData(event.target))));
+                    if (!data) {
+                      return;
+                    }
+                    handleAction("POST", "/staff-tracking/doubts", data);
                     event.target.reset();
                   }}
                 >
-                  <StaffSelect name="staffId" team={team} />
+                  {canManagePeople ? (
+                    <StaffSelect name="staffId" team={team} />
+                  ) : (
+                    <input value={currentStaffName} readOnly />
+                  )}
                   <input name="topic" placeholder="Topic" required />
                   <select name="priority" defaultValue="Medium">
                     <option value="Low">Low</option>
@@ -1899,7 +1991,7 @@ export default function App() {
                     { key: "status", label: "Status" },
                     { key: "response", label: "Response" }
                   ]}
-                  rows={staffTracking.doubts}
+                  rows={visibleDoubtRows}
                   canEdit={role !== "technician"}
                   onEdit={(data) => handleAction("PUT", `/staff-tracking/doubts/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/staff-tracking/doubts/${id}`)}
@@ -1913,12 +2005,19 @@ export default function App() {
                   className="form-grid"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    const data = Object.fromEntries(new FormData(event.target));
-                    handleAction("POST", "/staff-tracking/complaints", withSelectedCompany(data));
+                    const data = withCurrentStaff(withSelectedCompany(Object.fromEntries(new FormData(event.target))));
+                    if (!data) {
+                      return;
+                    }
+                    handleAction("POST", "/staff-tracking/complaints", data);
                     event.target.reset();
                   }}
                 >
-                  <StaffSelect name="staffId" team={team} />
+                  {canManagePeople ? (
+                    <StaffSelect name="staffId" team={team} />
+                  ) : (
+                    <input value={currentStaffName} readOnly />
+                  )}
                   <input name="complaintType" placeholder="Complaint type" required />
                   <input name="subject" placeholder="Subject" required />
                   <input name="description" placeholder="Description" className="wide" required />
@@ -1935,7 +2034,7 @@ export default function App() {
                     { key: "status", label: "Status" },
                     { key: "resolution", label: "Resolution" }
                   ]}
-                  rows={staffTracking.complaints}
+                  rows={visibleComplaintRows}
                   canEdit={role !== "technician"}
                   onEdit={(data) => handleAction("PUT", `/staff-tracking/complaints/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/staff-tracking/complaints/${id}`)}
@@ -2065,6 +2164,17 @@ export default function App() {
                               <p className="task-meta">Start: {task.startDate || "Not set"}</p>
                               <p className="task-meta">Due: {task.dueDate || "No due date"}</p>
                               <p className="task-copy">{task.description || "No description provided."}</p>
+                              {statusKey === "review" && isAdmin ? (
+                                <div className="task-card-actions">
+                                  <button
+                                    type="button"
+                                    className="save-row-btn"
+                                    onClick={() => handleAction("PUT", `/tasks/${task.id}`, { status: "done" })}
+                                  >
+                                    Approve Complete
+                                  </button>
+                                </div>
+                              ) : null}
                             </article>
                           ))
                         ) : (
@@ -2163,19 +2273,7 @@ export default function App() {
                   </div>
                   <div className="employee-task-grid">
                     {employeeTaskViews.today.length ? (
-                      employeeTaskViews.today.map((task) => (
-                        <article key={task.id} className="task-card">
-                          <div className="task-card-top">
-                            <strong>{task.title}</strong>
-                            <span className={`task-priority task-priority-${String(task.priority).toLowerCase()}`}>{task.priority}</span>
-                          </div>
-                          <p className="task-meta">Staff: {task.assigneeNames || task.assigneeName || "Unassigned"}</p>
-                          <p className="task-meta">Project: {task.projectName || "No project linked"}</p>
-                          <p className="task-meta">Start: {task.startDate || "Not set"}</p>
-                          <p className="task-meta">Due: {task.dueDate || "No due date"}</p>
-                          <p className="task-copy">{task.description || "No description provided."}</p>
-                        </article>
-                      ))
+                      employeeTaskViews.today.map(renderEmployeeTaskCard)
                     ) : (
                       <div className="task-empty">No tasks assigned for today.</div>
                     )}
@@ -2229,19 +2327,7 @@ export default function App() {
                   </div>
                   <div className="employee-task-grid">
                     {employeeTaskViews.myTasks.length ? (
-                      employeeTaskViews.myTasks.map((task) => (
-                        <article key={task.id} className="task-card">
-                          <div className="task-card-top">
-                            <strong>{task.title}</strong>
-                            <span className={`task-priority task-priority-${String(task.priority).toLowerCase()}`}>{task.priority}</span>
-                          </div>
-                          <p className="task-meta">Staff: {task.assigneeNames || task.assigneeName || "Unassigned"}</p>
-                          <p className="task-meta">Project: {task.projectName || "No project linked"}</p>
-                          <p className="task-meta">Status: {task.status}</p>
-                          <p className="task-meta">Due: {task.dueDate || "No due date"}</p>
-                          <p className="task-copy">{task.description || "No description provided."}</p>
-                        </article>
-                      ))
+                      employeeTaskViews.myTasks.map(renderEmployeeTaskCard)
                     ) : (
                       <div className="task-empty">No assigned tasks found.</div>
                     )}
@@ -2259,18 +2345,7 @@ export default function App() {
                   </div>
                   <div className="employee-task-grid">
                     {employeeTaskViews.overdue.length ? (
-                      employeeTaskViews.overdue.map((task) => (
-                        <article key={task.id} className="task-card">
-                          <div className="task-card-top">
-                            <strong>{task.title}</strong>
-                            <span className={`task-priority task-priority-${String(task.priority).toLowerCase()}`}>{task.priority}</span>
-                          </div>
-                          <p className="task-meta">Staff: {task.assigneeNames || task.assigneeName || "Unassigned"}</p>
-                          <p className="task-meta">Project: {task.projectName || "No project linked"}</p>
-                          <p className="task-meta">Due: {task.dueDate}</p>
-                          <p className="task-copy">{task.description || "No description provided."}</p>
-                        </article>
-                      ))
+                      employeeTaskViews.overdue.map(renderEmployeeTaskCard)
                     ) : (
                       <div className="task-empty">No overdue tasks for this employee.</div>
                     )}
@@ -2288,18 +2363,7 @@ export default function App() {
                   </div>
                   <div className="employee-task-grid">
                     {employeeTaskViews.urgent.length ? (
-                      employeeTaskViews.urgent.map((task) => (
-                        <article key={task.id} className="task-card">
-                          <div className="task-card-top">
-                            <strong>{task.title}</strong>
-                            <span className="task-priority task-priority-urgent">{task.priority}</span>
-                          </div>
-                          <p className="task-meta">Staff: {task.assigneeNames || task.assigneeName || "Unassigned"}</p>
-                          <p className="task-meta">Project: {task.projectName || "No project linked"}</p>
-                          <p className="task-meta">Due: {task.dueDate || "No due date"}</p>
-                          <p className="task-copy">{task.description || "No description provided."}</p>
-                        </article>
-                      ))
+                      employeeTaskViews.urgent.map(renderEmployeeTaskCard)
                     ) : (
                       <div className="task-empty">No urgent tasks for this employee.</div>
                     )}

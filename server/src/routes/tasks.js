@@ -24,6 +24,18 @@ function buildAssigneeData(db, primaryId, secondaryId) {
   };
 }
 
+function resolveRequestStaff(db, req) {
+  const email = String(req.header("x-user-email") || "").trim().toLowerCase();
+  const fullName = String(req.header("x-user-name") || "").trim();
+
+  return db.staff.find((entry) => {
+    if (email && String(entry.email || "").trim().toLowerCase() === email) {
+      return true;
+    }
+    return fullName && entry.fullName === fullName;
+  });
+}
+
 export const tasksRouter = Router();
 
 tasksRouter.get("/", authorize("technician"), (req, res) => {
@@ -58,11 +70,32 @@ tasksRouter.post("/", authorize("manager"), (req, res) => {
   res.status(201).json(task);
 });
 
-tasksRouter.put("/:id", authorize("manager"), (req, res) => {
+tasksRouter.put("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const task = db.tasks.find((entry) => entry.id === Number(req.params.id));
   if (!task) {
     return res.status(404).json({ message: "Task not found." });
+  }
+
+  if (req.userRole === "technician") {
+    const currentStaff = resolveRequestStaff(db, req);
+    const isAssigned =
+      currentStaff &&
+      (Number(task.assigneeId) === Number(currentStaff.id) ||
+        Number(task.secondaryAssigneeId || 0) === Number(currentStaff.id));
+
+    if (!isAssigned) {
+      return res.status(403).json({ message: "You can only update tasks assigned to your account." });
+    }
+
+    const nextStatus = String(req.body.status || "");
+    if (!["in-progress", "review"].includes(nextStatus)) {
+      return res.status(403).json({ message: "Employee accounts can only move tasks to In Progress or Review." });
+    }
+
+    task.status = nextStatus;
+    writeDb(db);
+    return res.json(task);
   }
 
   const nextCompany = req.body.companyId ? resolveCompany(db, req.body.companyId) : null;
