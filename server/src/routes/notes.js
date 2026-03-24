@@ -1,18 +1,25 @@
 import { Router } from "express";
 import { authorize } from "../middleware/rbac.js";
 import { nextId, readDb, writeDb } from "../data/store.js";
+import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services/companyScope.js";
 
 export const notesRouter = Router();
 
 notesRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(db.notes);
+  res.json(scopeRecords(db.notes, getRequestedCompanyId(req)));
 });
 
 notesRouter.post("/", authorize("technician"), (req, res) => {
   const db = readDb();
+  const company = resolveCompany(db, req.body.companyId);
+  if (!company) {
+    return res.status(400).json({ message: "Select a valid company before saving an idea." });
+  }
   const note = {
     id: nextId(db.notes),
+    companyId: company.id,
+    companyName: company.name,
     title: req.body.title,
     content: req.body.content,
     tags: Array.isArray(req.body.tags) ? req.body.tags : [],

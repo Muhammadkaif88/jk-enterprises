@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authorize } from "../middleware/rbac.js";
 import { nextId, readDb, writeDb } from "../data/store.js";
+import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services/companyScope.js";
 
 function withStaffName(db, staffId) {
   const member = db.staff.find((entry) => entry.id === Number(staffId));
@@ -9,29 +10,39 @@ function withStaffName(db, staffId) {
 
 export const staffTrackingRouter = Router();
 
-staffTrackingRouter.get("/summary", authorize("technician"), (_req, res) => {
+staffTrackingRouter.get("/summary", authorize("technician"), (req, res) => {
   const db = readDb();
+  const companyId = getRequestedCompanyId(req);
   const today = new Date().toISOString().slice(0, 10);
-  const todayAttendance = db.attendanceLogs.filter((entry) => entry.date === today);
+  const attendance = scopeRecords(db.attendanceLogs, companyId);
+  const doubts = scopeRecords(db.doubtClearance, companyId);
+  const complaints = scopeRecords(db.complaints, companyId);
+  const todayAttendance = attendance.filter((entry) => entry.date === today);
 
   res.json({
     todayAttendanceCount: todayAttendance.length,
     presentToday: todayAttendance.filter((entry) => entry.status === "Present").length,
     lateToday: todayAttendance.filter((entry) => entry.status === "Late").length,
-    openDoubts: db.doubtClearance.filter((entry) => entry.status !== "Resolved").length,
-    openComplaints: db.complaints.filter((entry) => entry.status !== "Closed").length
+    openDoubts: doubts.filter((entry) => entry.status !== "Resolved").length,
+    openComplaints: complaints.filter((entry) => entry.status !== "Closed").length
   });
 });
 
-staffTrackingRouter.get("/attendance", authorize("technician"), (_req, res) => {
+staffTrackingRouter.get("/attendance", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(db.attendanceLogs);
+  res.json(scopeRecords(db.attendanceLogs, getRequestedCompanyId(req)));
 });
 
 staffTrackingRouter.post("/attendance", authorize("technician"), (req, res) => {
   const db = readDb();
+  const company = resolveCompany(db, req.body.companyId);
+  if (!company) {
+    return res.status(400).json({ message: "Select a valid company before adding attendance." });
+  }
   const record = {
     id: nextId(db.attendanceLogs),
+    companyId: company.id,
+    companyName: company.name,
     staffId: Number(req.body.staffId),
     staffName: withStaffName(db, req.body.staffId),
     date: req.body.date || new Date().toISOString().slice(0, 10),
@@ -71,15 +82,21 @@ staffTrackingRouter.delete("/attendance/:id", authorize("manager"), (req, res) =
   res.status(204).send();
 });
 
-staffTrackingRouter.get("/doubts", authorize("technician"), (_req, res) => {
+staffTrackingRouter.get("/doubts", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(db.doubtClearance);
+  res.json(scopeRecords(db.doubtClearance, getRequestedCompanyId(req)));
 });
 
 staffTrackingRouter.post("/doubts", authorize("technician"), (req, res) => {
   const db = readDb();
+  const company = resolveCompany(db, req.body.companyId);
+  if (!company) {
+    return res.status(400).json({ message: "Select a valid company before adding a doubt." });
+  }
   const item = {
     id: nextId(db.doubtClearance),
+    companyId: company.id,
+    companyName: company.name,
     staffId: Number(req.body.staffId),
     staffName: withStaffName(db, req.body.staffId),
     topic: req.body.topic,
@@ -125,15 +142,21 @@ staffTrackingRouter.delete("/doubts/:id", authorize("manager"), (req, res) => {
   res.status(204).send();
 });
 
-staffTrackingRouter.get("/complaints", authorize("technician"), (_req, res) => {
+staffTrackingRouter.get("/complaints", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(db.complaints);
+  res.json(scopeRecords(db.complaints, getRequestedCompanyId(req)));
 });
 
 staffTrackingRouter.post("/complaints", authorize("technician"), (req, res) => {
   const db = readDb();
+  const company = resolveCompany(db, req.body.companyId);
+  if (!company) {
+    return res.status(400).json({ message: "Select a valid company before adding a complaint." });
+  }
   const item = {
     id: nextId(db.complaints),
+    companyId: company.id,
+    companyName: company.name,
     staffId: Number(req.body.staffId),
     staffName: withStaffName(db, req.body.staffId),
     complaintType: req.body.complaintType || "General",

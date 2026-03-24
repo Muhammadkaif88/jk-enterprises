@@ -1,16 +1,21 @@
 import { Router } from "express";
 import { authorize } from "../middleware/rbac.js";
 import { nextId, readDb, writeDb } from "../data/store.js";
+import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services/companyScope.js";
 
 export const projectsRouter = Router();
 
 projectsRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(db.projects);
+  res.json(scopeRecords(db.projects, getRequestedCompanyId(req)));
 });
 
 projectsRouter.post("/", authorize("manager"), (req, res) => {
   const db = readDb();
+  const company = resolveCompany(db, req.body.companyId);
+  if (!company) {
+    return res.status(400).json({ message: "Select a valid company before creating a project." });
+  }
   const bom = Array.isArray(req.body.bom) ? req.body.bom : [];
 
   for (const bomItem of bom) {
@@ -18,18 +23,12 @@ projectsRouter.post("/", authorize("manager"), (req, res) => {
     if (!inventoryItem) {
       return res.status(400).json({ message: `Inventory item ${bomItem.inventoryId} not found.` });
     }
-    if (inventoryItem.stockQty < Number(bomItem.quantity)) {
-      return res.status(400).json({ message: `${inventoryItem.partName} does not have enough stock.` });
-    }
   }
-
-  bom.forEach((bomItem) => {
-    const inventoryItem = db.inventory.find((item) => item.id === Number(bomItem.inventoryId));
-    inventoryItem.stockQty -= Number(bomItem.quantity);
-  });
 
   const project = {
     id: nextId(db.projects),
+    companyId: company.id,
+    companyName: company.name,
     projectName: req.body.projectName,
     clientName: req.body.clientName || "",
     status: req.body.status || "rd",
@@ -39,7 +38,11 @@ projectsRouter.post("/", authorize("manager"), (req, res) => {
     codeLink: req.body.codeLink || "",
     componentNotes: req.body.componentNotes || "",
     projectDetails: req.body.projectDetails || "",
+    projectCode: req.body.projectCode || "",
+    usedComponents: Array.isArray(req.body.usedComponents) ? req.body.usedComponents.filter(Boolean) : [],
     notes: req.body.notes || "",
+    circuitAttachments: Array.isArray(req.body.circuitAttachments) ? req.body.circuitAttachments : [],
+    projectFiles: Array.isArray(req.body.projectFiles) ? req.body.projectFiles : [],
     imageAttachments: Array.isArray(req.body.imageAttachments) ? req.body.imageAttachments : [],
     bom: bom.map((item) => ({
       inventoryId: Number(item.inventoryId),
@@ -79,7 +82,11 @@ projectsRouter.put("/:id", authorize("manager"), (req, res) => {
     codeLink: req.body.codeLink ?? project.codeLink,
     componentNotes: req.body.componentNotes ?? project.componentNotes,
     projectDetails: req.body.projectDetails ?? project.projectDetails,
+    projectCode: req.body.projectCode ?? project.projectCode,
+    usedComponents: Array.isArray(req.body.usedComponents) ? req.body.usedComponents.filter(Boolean) : project.usedComponents,
     notes: req.body.notes ?? project.notes,
+    circuitAttachments: Array.isArray(req.body.circuitAttachments) ? req.body.circuitAttachments : project.circuitAttachments,
+    projectFiles: Array.isArray(req.body.projectFiles) ? req.body.projectFiles : project.projectFiles,
     imageAttachments: Array.isArray(req.body.imageAttachments) ? req.body.imageAttachments : project.imageAttachments,
     bom: req.body.bom ? req.body.bom.map((item) => ({
       inventoryId: Number(item.inventoryId),

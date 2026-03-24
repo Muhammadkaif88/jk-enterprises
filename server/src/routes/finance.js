@@ -1,16 +1,18 @@
 import { Router } from "express";
 import { authorize } from "../middleware/rbac.js";
 import { nextId, readDb, writeDb } from "../data/store.js";
+import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services/companyScope.js";
 
 export const financeRouter = Router();
 
 financeRouter.get("/", authorize("manager"), (req, res) => {
   const db = readDb();
-  res.json(db.finance);
+  res.json(scopeRecords(db.finance, getRequestedCompanyId(req)));
 });
 
 financeRouter.get("/summary", authorize("manager"), (req, res) => {
   const db = readDb();
+  const scopedFinance = scopeRecords(db.finance, getRequestedCompanyId(req));
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
   const monthKey = todayKey.slice(0, 7);
@@ -21,8 +23,8 @@ financeRouter.get("/summary", authorize("manager"), (req, res) => {
       .reduce((sum, entry) => sum + Number(entry.amount), 0);
   }
 
-  const todayLogs = db.finance.filter((entry) => (entry.entryDate || entry.createdAt.slice(0, 10)) === todayKey);
-  const monthLogs = db.finance.filter((entry) => (entry.entryDate || entry.createdAt.slice(0, 10)).startsWith(monthKey));
+  const todayLogs = scopedFinance.filter((entry) => (entry.entryDate || entry.createdAt.slice(0, 10)) === todayKey);
+  const monthLogs = scopedFinance.filter((entry) => (entry.entryDate || entry.createdAt.slice(0, 10)).startsWith(monthKey));
 
   res.json({
     today: {
@@ -37,7 +39,7 @@ financeRouter.get("/summary", authorize("manager"), (req, res) => {
       expense: sumLogs(monthLogs, "expense"),
       profit: sumLogs(monthLogs, "income") - sumLogs(monthLogs, "purchase") - sumLogs(monthLogs, "expense")
     },
-    recentExpenses: db.finance
+    recentExpenses: scopedFinance
       .filter((entry) => entry.transactionType === "expense")
       .slice(0, 5)
   });
@@ -45,8 +47,14 @@ financeRouter.get("/summary", authorize("manager"), (req, res) => {
 
 financeRouter.post("/", authorize("manager"), (req, res) => {
   const db = readDb();
+  const company = resolveCompany(db, req.body.companyId);
+  if (!company) {
+    return res.status(400).json({ message: "Select a valid company before logging accounting entries." });
+  }
   const log = {
     id: nextId(db.finance),
+    companyId: company.id,
+    companyName: company.name,
     transactionType: req.body.transactionType,
     amount: Number(req.body.amount || 0),
     description: req.body.description,

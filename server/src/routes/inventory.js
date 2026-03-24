@@ -1,18 +1,25 @@
 import { Router } from "express";
 import { authorize } from "../middleware/rbac.js";
 import { nextId, readDb, writeDb } from "../data/store.js";
+import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services/companyScope.js";
 
 export const inventoryRouter = Router();
 
 inventoryRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(db.inventory);
+  res.json(scopeRecords(db.inventory, getRequestedCompanyId(req)));
 });
 
 inventoryRouter.post("/", authorize("manager"), (req, res) => {
   const db = readDb();
+  const company = resolveCompany(db, req.body.companyId);
+  if (!company) {
+    return res.status(400).json({ message: "Select a valid company before creating inventory." });
+  }
   const item = {
     id: nextId(db.inventory),
+    companyId: company.id,
+    companyName: company.name,
     partName: req.body.partName,
     category: req.body.category,
     partValue: req.body.partValue || "",
