@@ -651,6 +651,14 @@ button {
   width: min(100%, 420px);
 }
 
+.finance-toolbar {
+  margin: 16px 0;
+}
+
+.finance-toolbar input {
+  width: min(100%, 240px);
+}
+
 .inventory-alert-card {
   display: flex;
   justify-content: space-between;

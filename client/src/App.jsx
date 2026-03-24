@@ -371,6 +371,7 @@ export default function App() {
   const [inventory, setInventory] = useState([]);
   const [finance, setFinance] = useState([]);
   const [financeSummary, setFinanceSummary] = useState(null);
+  const [financeSearchDate, setFinanceSearchDate] = useState("");
   const [billing, setBilling] = useState([]);
   const [billingLines, setBillingLines] = useState([{ inventoryId: "", description: "", qty: 1, price: 0 }]);
   const [inventorySearch, setInventorySearch] = useState("");
@@ -654,6 +655,16 @@ export default function App() {
         .includes(query)
     );
   }, [inventory, inventorySearch]);
+  const filteredFinance = useMemo(() => {
+    if (!financeSearchDate) {
+      return finance;
+    }
+
+    return finance.filter((entry) => {
+      const entryDate = entry.entryDate || String(entry.createdAt || "").slice(0, 10);
+      return entryDate === financeSearchDate;
+    });
+  }, [finance, financeSearchDate]);
   const taskColumns = [
     ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
     { key: "title", label: "Task" },
@@ -1058,7 +1069,6 @@ export default function App() {
               className={activeSection === section.id ? "nav-item active" : "nav-item"}
               onClick={() => setActiveSection(section.id)}
             >
-              <span>{section.icon}</span>
               {section.label}
             </button>
           ))}
@@ -1067,7 +1077,7 @@ export default function App() {
         <div className="sidebar-footer">
           <p className="sidebar-user">{user.fullName}</p>
           <button className="nav-item" onClick={handleLogout}>
-            <span>OUT</span> Sign Out
+            Sign Out
           </button>
         </div>
       </aside>
@@ -1286,6 +1296,14 @@ export default function App() {
                   <button type="submit">Log Entry</button>
                 </form>
 
+                <div className="finance-toolbar">
+                  <input
+                    type="date"
+                    value={financeSearchDate}
+                    onChange={(event) => setFinanceSearchDate(event.target.value)}
+                  />
+                </div>
+
                 <DataTable
                   columns={[
                     ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
@@ -1295,7 +1313,7 @@ export default function App() {
                     { key: "description", label: "Description" },
                     { key: "amount", label: "Amount", type: "number", render: (row) => currency(row.amount) }
                   ]}
-                  rows={finance}
+                  rows={filteredFinance}
                   canEdit={role !== "technician"}
                   onEdit={(data) => handleAction("PUT", `/finance/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/finance/${id}`)}
