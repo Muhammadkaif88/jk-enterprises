@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import RecycleBinSection from "./RecycleBinSection";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 const sections = [
@@ -11,7 +12,8 @@ const sections = [
   { id: "notes", icon: "ID", label: "Idea Lab" },
   { id: "team", icon: "TM", label: "Team" },
   { id: "staffTracking", icon: "ST", label: "Staff Tracking" },
-  { id: "tasks", icon: "TK", label: "Tasks" }
+  { id: "tasks", icon: "TK", label: "Tasks" },
+  { id: "recycleBin", icon: "DB", label: "Deleted Items" }
 ];
 
 const staffRoleOptions = [
@@ -2706,6 +2708,20 @@ export default function App() {
               ) : null}
             </SectionCard>
           </div>
+        ) : null}
+
+        {activeSection === "recycleBin" ? (
+          <RecycleBinSection
+            role={role}
+            selectedCompany={selectedCompany}
+            companies={companies}
+            API_URL={API_URL}
+            token={token}
+            api={api}
+            refreshAll={refreshAll}
+            setMessage={setMessage}
+            user={user}
+          />
         ) : null}
       </main>
     </div>
