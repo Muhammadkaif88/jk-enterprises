@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authorize } from "../middleware/rbac.js";
 import { nextId, readDb, writeDb } from "../data/store.js";
 import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services/companyScope.js";
+import { syncAttendanceStatuses } from "../services/attendanceStatus.js";
 
 export const teamRouter = Router();
 
@@ -23,6 +24,7 @@ function buildUserAccount(member, password) {
 
 teamRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
+  syncAttendanceStatuses(db);
   res.json(scopeRecords(db.staff, getRequestedCompanyId(req)));
 });
 
@@ -51,7 +53,7 @@ teamRouter.post("/", authorize("admin"), (req, res) => {
     role: req.body.role || "technician",
     staffCategory: req.body.staffCategory || "",
     expertise: req.body.expertise || "",
-    attendanceStatus: req.body.attendanceStatus || "Present",
+    attendanceStatus: "Pending Assignment",
     assignedTask: req.body.assignedTask || "",
     salary: Number(req.body.salary || 0)
   };
@@ -78,7 +80,6 @@ teamRouter.put("/:id", authorize("manager"), (req, res) => {
     role: req.body.role ?? member.role,
     staffCategory: req.body.staffCategory ?? member.staffCategory,
     expertise: req.body.expertise ?? member.expertise,
-    attendanceStatus: req.body.attendanceStatus ?? member.attendanceStatus,
     assignedTask: req.body.assignedTask ?? member.assignedTask,
     salary: req.body.salary !== undefined ? Number(req.body.salary) : member.salary
   });

@@ -443,6 +443,18 @@ export default function App() {
   const visibleComplaintRows = canManagePeople
     ? staffTracking.complaints
     : staffTracking.complaints.filter((entry) => Number(entry.staffId) === Number(currentStaffMember?.id));
+  const todayDateKey = new Date().toISOString().slice(0, 10);
+  const todayAttendanceRecord = useMemo(
+    () =>
+      currentStaffMember
+        ? [...staffTracking.attendance]
+            .filter(
+              (entry) => Number(entry.staffId) === Number(currentStaffMember.id) && String(entry.date || "") === todayDateKey
+            )
+            .sort((left, right) => Number(right.id) - Number(left.id))[0] || null
+        : null,
+    [currentStaffMember, staffTracking.attendance, todayDateKey]
+  );
 
   async function api(path, options = {}) {
     const url = new URL(`${API_URL}${path}`);
@@ -2025,13 +2037,13 @@ export default function App() {
 
               <DataTable
                 columns={[
-                  ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
+                  ...((showCompanyColumn || !isAdmin) ? [{ key: "companyName", label: "Company", editable: false }] : []),
                   { key: "fullName", label: "Name" },
                   { key: "email", label: "Email" },
-                  { key: "phone", label: "Phone" },
-                  { key: "role", label: "Role", options: teamRoleOptions },
+                  ...(isAdmin ? [{ key: "phone", label: "Phone" }] : []),
+                  ...(isAdmin ? [{ key: "role", label: "Role", options: teamRoleOptions }] : []),
                   { key: "staffCategory", label: "Category", options: employeeCategoryOptions },
-                  { key: "attendanceStatus", label: "Current Status", options: attendanceStatusOptions }
+                  { key: "attendanceStatus", label: "Current Status", editable: false }
                 ]}
                 rows={team}
                 canEdit={role === "admin"}
@@ -2096,48 +2108,76 @@ export default function App() {
             )}
 
             {staffTrackingView === "attendance" ? (
-              <SectionCard title="Daily Attendance" kicker="Mark staff presence">
-                <form
-                  className="form-grid"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const data = withCurrentStaff(withSelectedCompany(Object.fromEntries(new FormData(event.target))));
-                    if (!data) {
-                      return;
-                    }
-                    handleAction("POST", "/staff-tracking/attendance", data);
-                    event.target.reset();
-                  }}
-                >
-                  {canManagePeople ? (
-                    <StaffSelect name="staffId" team={team} />
-                  ) : (
-                    <input value={currentStaffName} readOnly />
-                  )}
-                  <input name="date" type="date" required />
-                  <select name="status" defaultValue="Present">
-                    <option value="Present">Present</option>
-                    <option value="Late">Late</option>
-                    <option value="Absent">Absent</option>
-                    <option value="Leave">Leave</option>
-                  </select>
-                  <input name="checkIn" type="time" />
-                  <input name="checkOut" type="time" />
-                  <input name="notes" placeholder="Notes" className="wide" />
-                  <button type="submit">Add Attendance</button>
-                </form>
+              <SectionCard title="Daily Attendance" kicker="Check in and check out">
+                <div className="attendance-action-grid">
+                  <form
+                    className="attendance-action-card"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const data = withCurrentStaff(withSelectedCompany(Object.fromEntries(new FormData(event.target))));
+                      if (!data) {
+                        return;
+                      }
+                      handleAction("POST", "/staff-tracking/attendance", data);
+                      event.target.reset();
+                    }}
+                  >
+                    <p className="kicker">Check In</p>
+                    <h3>{currentStaffName || "Linked account required"}</h3>
+                    <div className="attendance-meta">
+                      <span>Date</span>
+                      <strong>{todayDateKey}</strong>
+                    </div>
+                    <div className="attendance-meta">
+                      <span>Time</span>
+                      <strong>{todayAttendanceRecord?.checkIn || "Auto on check in"}</strong>
+                    </div>
+                    <select name="status" defaultValue="Present" disabled={!currentStaffMember || Boolean(todayAttendanceRecord)}>
+                      <option value="Present">Present</option>
+                      <option value="Leave">Leave</option>
+                    </select>
+                    <button type="submit" disabled={!currentStaffMember || Boolean(todayAttendanceRecord)}>
+                      Check In
+                    </button>
+                  </form>
+
+                  <div className="attendance-action-card">
+                    <p className="kicker">Check Out</p>
+                    <h3>{currentStaffName || "Linked account required"}</h3>
+                    <div className="attendance-meta">
+                      <span>Checked In</span>
+                      <strong>{todayAttendanceRecord?.checkIn || "No check in yet"}</strong>
+                    </div>
+                    <div className="attendance-meta">
+                      <span>Checked Out</span>
+                      <strong>{todayAttendanceRecord?.checkOut || "Auto on check out"}</strong>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={
+                        !currentStaffMember ||
+                        !todayAttendanceRecord ||
+                        Boolean(todayAttendanceRecord.checkOut) ||
+                        String(todayAttendanceRecord.status || "").toLowerCase() === "leave"
+                      }
+                      onClick={() => handleAction("POST", "/staff-tracking/attendance/check-out", withSelectedCompany({}))}
+                    >
+                      Check Out
+                    </button>
+                  </div>
+                </div>
 
                 <DataTable
                   columns={[
                     ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
-                    { key: "staffName", label: "Staff", editable: false },
-                    { key: "date", label: "Date" },
-                    { key: "status", label: "Status" },
-                    { key: "checkIn", label: "In" },
-                    { key: "checkOut", label: "Out" }
+                    { key: "staffName", label: "Name", editable: false },
+                    { key: "date", label: "Date", editable: false },
+                    { key: "status", label: "Status", editable: false },
+                    { key: "checkIn", label: "Check In", editable: false },
+                    { key: "checkOut", label: "Check Out", editable: false }
                   ]}
                   rows={visibleAttendanceRows}
-                  canEdit={role !== "technician"}
+                  canEdit={false}
                   onEdit={(data) => handleAction("PUT", `/staff-tracking/attendance/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/staff-tracking/attendance/${id}`)}
                 />

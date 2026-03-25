@@ -2,10 +2,27 @@ import { Router } from "express";
 import { authorize } from "../middleware/rbac.js";
 import { nextId, readDb, writeDb } from "../data/store.js";
 import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services/companyScope.js";
+import { syncAttendanceStatuses } from "../services/attendanceStatus.js";
+
+function currentTimeString() {
+  return new Date().toTimeString().slice(0, 5);
+}
 
 function withStaffName(db, staffId) {
   const member = db.staff.find((entry) => entry.id === Number(staffId));
   return member?.fullName || "Unknown Staff";
+}
+
+function resolveRequestStaff(db, req) {
+  const email = String(req.header("x-user-email") || "").trim().toLowerCase();
+  const fullName = String(req.header("x-user-name") || "").trim();
+
+  return db.staff.find((entry) => {
+    if (email && String(entry.email || "").trim().toLowerCase() === email) {
+      return true;
+    }
+    return fullName && entry.fullName === fullName;
+  });
 }
 
 export const staffTrackingRouter = Router();
@@ -35,25 +52,60 @@ staffTrackingRouter.get("/attendance", authorize("technician"), (req, res) => {
 
 staffTrackingRouter.post("/attendance", authorize("technician"), (req, res) => {
   const db = readDb();
-  const company = resolveCompany(db, req.body.companyId);
+  const requestStaff = resolveRequestStaff(db, req);
+  const company = resolveCompany(db, req.body.companyId || requestStaff?.companyId);
   if (!company) {
     return res.status(400).json({ message: "Select a valid company before adding attendance." });
+  }
+  const targetStaffId = Number(req.body.staffId || requestStaff?.id || 0);
+  if (!targetStaffId) {
+    return res.status(400).json({ message: "No linked staff profile found for attendance." });
+  }
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const existingTodayRecord = db.attendanceLogs.find(
+    (entry) => Number(entry.staffId) === targetStaffId && entry.date === todayKey
+  );
+  if (existingTodayRecord) {
+    return res.status(400).json({ message: "Attendance already checked in for today. Use check out when work is completed." });
   }
   const record = {
     id: nextId(db.attendanceLogs),
     companyId: company.id,
     companyName: company.name,
-    staffId: Number(req.body.staffId),
-    staffName: withStaffName(db, req.body.staffId),
-    date: req.body.date || new Date().toISOString().slice(0, 10),
-    status: req.body.status || "Present",
-    checkIn: req.body.checkIn || "",
+    staffId: targetStaffId,
+    staffName: withStaffName(db, targetStaffId),
+    date: todayKey,
+    status: req.body.status === "Leave" ? "Leave" : "Present",
+    checkIn: currentTimeString(),
     checkOut: req.body.checkOut || "",
     notes: req.body.notes || ""
   };
   db.attendanceLogs.unshift(record);
+  syncAttendanceStatuses(db);
   writeDb(db);
   res.status(201).json(record);
+});
+
+staffTrackingRouter.post("/attendance/check-out", authorize("technician"), (req, res) => {
+  const db = readDb();
+  const requestStaff = resolveRequestStaff(db, req);
+  if (!requestStaff) {
+    return res.status(400).json({ message: "No linked staff profile found for attendance." });
+  }
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const record = db.attendanceLogs.find(
+    (entry) => Number(entry.staffId) === Number(requestStaff.id) && entry.date === todayKey
+  );
+
+  if (!record) {
+    return res.status(404).json({ message: "No check-in found for today. Complete check in first." });
+  }
+
+  record.checkOut = currentTimeString();
+  syncAttendanceStatuses(db);
+  writeDb(db);
+  res.json(record);
 });
 
 staffTrackingRouter.put("/attendance/:id", authorize("manager"), (req, res) => {
@@ -71,6 +123,7 @@ staffTrackingRouter.put("/attendance/:id", authorize("manager"), (req, res) => {
     checkOut: req.body.checkOut ?? record.checkOut,
     notes: req.body.notes ?? record.notes
   });
+  syncAttendanceStatuses(db);
   writeDb(db);
   res.json(record);
 });
@@ -78,6 +131,7 @@ staffTrackingRouter.put("/attendance/:id", authorize("manager"), (req, res) => {
 staffTrackingRouter.delete("/attendance/:id", authorize("manager"), (req, res) => {
   const db = readDb();
   db.attendanceLogs = db.attendanceLogs.filter((entry) => entry.id !== Number(req.params.id));
+  syncAttendanceStatuses(db);
   writeDb(db);
   res.status(204).send();
 });
