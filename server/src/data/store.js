@@ -1,7 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dbPath = path.resolve("src/data/db.json");
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(moduleDir, "../../..");
+const dataDir = path.join(projectRoot, ".erms-data");
+const dbPath = path.join(dataDir, "db.json");
+const backupDbPath = path.join(dataDir, "db.backup.json");
+const legacyDbPaths = [
+  path.join(moduleDir, "db.json"),
+  path.join(projectRoot, "src/data/db.json")
+];
 
 const seedData = {
   companies: [
@@ -530,6 +539,18 @@ function normalizeInvestment(entry) {
   });
 }
 
+function normalizeAttendanceLog(entry) {
+  return withCompany({
+    checkIn: "",
+    checkOut: "",
+    workedMinutes: 0,
+    workedDuration: "",
+    dayApprovalStatus: "",
+    notes: "",
+    ...entry
+  });
+}
+
 function normalizeDb(data) {
   currentCompanies = data.companies || seedData.companies;
   return {
@@ -541,7 +562,7 @@ function normalizeDb(data) {
     finance: (data.finance || seedData.finance).map((entry) => withCompany(entry)),
     projects: (data.projects || seedData.projects).map(normalizeProject),
     notes: (data.notes || seedData.notes).map((entry) => withCompany(entry)),
-    attendanceLogs: (data.attendanceLogs || seedData.attendanceLogs).map((entry) => withCompany(entry)),
+    attendanceLogs: (data.attendanceLogs || seedData.attendanceLogs).map(normalizeAttendanceLog),
     doubtClearance: (data.doubtClearance || seedData.doubtClearance).map((entry) => withCompany(entry)),
     complaints: (data.complaints || seedData.complaints).map((entry) => withCompany(entry)),
     tasks: (data.tasks || seedData.tasks).map(normalizeTask),
@@ -551,13 +572,40 @@ function normalizeDb(data) {
   };
 }
 
+function pickLatestExistingPath(paths) {
+  return paths
+    .filter((candidate) => fs.existsSync(candidate))
+    .map((candidate) => ({
+      candidate,
+      mtimeMs: fs.statSync(candidate).mtimeMs
+    }))
+    .sort((left, right) => right.mtimeMs - left.mtimeMs)[0]?.candidate || null;
+}
+
+function readRawDbFile(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+}
+
+function persistDbSnapshot(filePath, data) {
+  fs.writeFileSync(filePath, JSON.stringify(normalizeDb(data), null, 2));
+}
+
 function ensureDb() {
-  const dir = path.dirname(dbPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
+
   if (!fs.existsSync(dbPath)) {
-    fs.writeFileSync(dbPath, JSON.stringify(seedData, null, 2));
+    const migrationSource = pickLatestExistingPath(legacyDbPaths);
+    if (migrationSource) {
+      const migratedData = readRawDbFile(migrationSource);
+      persistDbSnapshot(dbPath, migratedData);
+      fs.copyFileSync(dbPath, backupDbPath);
+      return;
+    }
+
+    persistDbSnapshot(dbPath, seedData);
+    fs.copyFileSync(dbPath, backupDbPath);
   }
 }
 
@@ -577,17 +625,45 @@ export function readDb() {
     return cachedDb;
   } catch (err) {
     console.error("Error reading database:", err);
-    // Fallback if db.json is corrupted
-    return normalizeDb(seedData);
+    try {
+      if (fs.existsSync(backupDbPath)) {
+        const backupData = normalizeDb(readRawDbFile(backupDbPath));
+        persistDbSnapshot(dbPath, backupData);
+        cachedDb = backupData;
+        dbLastRead = fs.statSync(dbPath).mtimeMs;
+        return backupData;
+      }
+
+      const legacySource = pickLatestExistingPath(legacyDbPaths);
+      if (legacySource) {
+        const legacyData = normalizeDb(readRawDbFile(legacySource));
+        persistDbSnapshot(dbPath, legacyData);
+        fs.copyFileSync(dbPath, backupDbPath);
+        cachedDb = legacyData;
+        dbLastRead = fs.statSync(dbPath).mtimeMs;
+        return legacyData;
+      }
+    } catch (recoveryError) {
+      console.error("Error recovering database:", recoveryError);
+    }
+
+    const safeSeed = normalizeDb(seedData);
+    persistDbSnapshot(dbPath, safeSeed);
+    fs.copyFileSync(dbPath, backupDbPath);
+    return safeSeed;
   }
 }
 
 export function writeDb(data) {
   try {
-    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
-    cachedDb = data;
-    dbLastRead = Date.now();
-    return data;
+    const normalizedData = normalizeDb(data);
+    if (fs.existsSync(dbPath)) {
+      fs.copyFileSync(dbPath, backupDbPath);
+    }
+    persistDbSnapshot(dbPath, normalizedData);
+    cachedDb = normalizedData;
+    dbLastRead = fs.statSync(dbPath).mtimeMs;
+    return normalizedData;
   } catch (err) {
     console.error("Error writing database:", err);
     throw err;

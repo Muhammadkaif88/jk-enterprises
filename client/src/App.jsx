@@ -80,6 +80,20 @@ function currency(value) {
   }).format(Number(value || 0));
 }
 
+function getIndiaDateKey() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === "year")?.value || "0000";
+  const month = parts.find((part) => part.type === "month")?.value || "01";
+  const day = parts.find((part) => part.type === "day")?.value || "01";
+  return `${year}-${month}-${day}`;
+}
+
 async function filesToDataUrls(fileList) {
   const files = Array.from(fileList || []);
   return Promise.all(
@@ -443,7 +457,7 @@ export default function App() {
   const visibleComplaintRows = canManagePeople
     ? staffTracking.complaints
     : staffTracking.complaints.filter((entry) => Number(entry.staffId) === Number(currentStaffMember?.id));
-  const todayDateKey = new Date().toISOString().slice(0, 10);
+  const todayDateKey = getIndiaDateKey();
   const todayAttendanceRecord = useMemo(
     () =>
       currentStaffMember
@@ -2152,6 +2166,14 @@ export default function App() {
                       <span>Checked Out</span>
                       <strong>{todayAttendanceRecord?.checkOut || "Auto on check out"}</strong>
                     </div>
+                    <div className="attendance-meta">
+                      <span>Worked Hours</span>
+                      <strong>{todayAttendanceRecord?.workedDuration || "Calculated on check out"}</strong>
+                    </div>
+                    <div className="attendance-meta">
+                      <span>Day Status</span>
+                      <strong>{todayAttendanceRecord?.dayApprovalStatus || "Pending approval"}</strong>
+                    </div>
                     <button
                       type="button"
                       disabled={
@@ -2174,7 +2196,9 @@ export default function App() {
                     { key: "date", label: "Date", editable: false },
                     { key: "status", label: "Status", editable: false },
                     { key: "checkIn", label: "Check In", editable: false },
-                    { key: "checkOut", label: "Check Out", editable: false }
+                    { key: "checkOut", label: "Check Out", editable: false },
+                    { key: "workedDuration", label: "Worked Hours", editable: false },
+                    { key: "dayApprovalStatus", label: "Day Approval", editable: false }
                   ]}
                   rows={visibleAttendanceRows}
                   canEdit={false}

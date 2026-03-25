@@ -1,9 +1,7 @@
-function getTodayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { getIndiaDateKey } from "./indiaTime.js";
 
 export function resolveAttendanceStatus(db, staffId) {
-  const todayKey = getTodayKey();
+  const todayKey = getIndiaDateKey();
   const todayRecords = (db.attendanceLogs || [])
     .filter((entry) => Number(entry.staffId) === Number(staffId) && entry.date === todayKey)
     .sort((left, right) => Number(right.id) - Number(left.id));

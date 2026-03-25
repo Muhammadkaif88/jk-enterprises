@@ -3,10 +3,7 @@ import { authorize } from "../middleware/rbac.js";
 import { nextId, readDb, writeDb } from "../data/store.js";
 import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services/companyScope.js";
 import { syncAttendanceStatuses } from "../services/attendanceStatus.js";
-
-function currentTimeString() {
-  return new Date().toTimeString().slice(0, 5);
-}
+import { formatWorkedDuration, getIndiaDateKey, getIndiaTimeLabel, parseIndiaTimeLabel } from "../services/indiaTime.js";
 
 function withStaffName(db, staffId) {
   const member = db.staff.find((entry) => entry.id === Number(staffId));
@@ -25,12 +22,45 @@ function resolveRequestStaff(db, req) {
   });
 }
 
+function applyAttendanceWorkSummary(record) {
+  if (record.status === "Leave") {
+    record.workedMinutes = 0;
+    record.workedDuration = "0h 00m";
+    record.dayApprovalStatus = "Leave Approved";
+    return record;
+  }
+
+  const checkInMinutes = parseIndiaTimeLabel(record.checkIn);
+  const checkOutMinutes = parseIndiaTimeLabel(record.checkOut);
+
+  if (checkInMinutes === null || checkOutMinutes === null) {
+    record.workedMinutes = 0;
+    record.workedDuration = "";
+    record.dayApprovalStatus = "Working Session Open";
+    return record;
+  }
+
+  const workedMinutes = Math.max(0, checkOutMinutes - checkInMinutes);
+  record.workedMinutes = workedMinutes;
+  record.workedDuration = formatWorkedDuration(workedMinutes);
+
+  if (workedMinutes >= 420) {
+    record.dayApprovalStatus = "Full Day Approved";
+  } else if (workedMinutes >= 300) {
+    record.dayApprovalStatus = "3/4 Day Approved";
+  } else {
+    record.dayApprovalStatus = "Half Day Approved";
+  }
+
+  return record;
+}
+
 export const staffTrackingRouter = Router();
 
 staffTrackingRouter.get("/summary", authorize("technician"), (req, res) => {
   const db = readDb();
   const companyId = getRequestedCompanyId(req);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getIndiaDateKey();
   const attendance = scopeRecords(db.attendanceLogs, companyId);
   const doubts = scopeRecords(db.doubtClearance, companyId);
   const complaints = scopeRecords(db.complaints, companyId);
@@ -61,7 +91,7 @@ staffTrackingRouter.post("/attendance", authorize("technician"), (req, res) => {
   if (!targetStaffId) {
     return res.status(400).json({ message: "No linked staff profile found for attendance." });
   }
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getIndiaDateKey();
   const existingTodayRecord = db.attendanceLogs.find(
     (entry) => Number(entry.staffId) === targetStaffId && entry.date === todayKey
   );
@@ -76,10 +106,14 @@ staffTrackingRouter.post("/attendance", authorize("technician"), (req, res) => {
     staffName: withStaffName(db, targetStaffId),
     date: todayKey,
     status: req.body.status === "Leave" ? "Leave" : "Present",
-    checkIn: currentTimeString(),
+    checkIn: getIndiaTimeLabel(),
     checkOut: req.body.checkOut || "",
+    workedMinutes: 0,
+    workedDuration: "",
+    dayApprovalStatus: "",
     notes: req.body.notes || ""
   };
+  applyAttendanceWorkSummary(record);
   db.attendanceLogs.unshift(record);
   syncAttendanceStatuses(db);
   writeDb(db);
@@ -93,7 +127,7 @@ staffTrackingRouter.post("/attendance/check-out", authorize("technician"), (req,
     return res.status(400).json({ message: "No linked staff profile found for attendance." });
   }
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getIndiaDateKey();
   const record = db.attendanceLogs.find(
     (entry) => Number(entry.staffId) === Number(requestStaff.id) && entry.date === todayKey
   );
@@ -102,7 +136,8 @@ staffTrackingRouter.post("/attendance/check-out", authorize("technician"), (req,
     return res.status(404).json({ message: "No check-in found for today. Complete check in first." });
   }
 
-  record.checkOut = currentTimeString();
+  record.checkOut = getIndiaTimeLabel();
+  applyAttendanceWorkSummary(record);
   syncAttendanceStatuses(db);
   writeDb(db);
   res.json(record);
@@ -123,6 +158,7 @@ staffTrackingRouter.put("/attendance/:id", authorize("manager"), (req, res) => {
     checkOut: req.body.checkOut ?? record.checkOut,
     notes: req.body.notes ?? record.notes
   });
+  applyAttendanceWorkSummary(record);
   syncAttendanceStatuses(db);
   writeDb(db);
   res.json(record);
