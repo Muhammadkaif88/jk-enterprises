@@ -58,6 +58,14 @@ function runAutoCleanup() {
         const now = new Date().getTime();
         if (now - deletedTime > TEN_DAYS_MS) {
           totalCleaned++;
+          
+          if (collection === "staff") {
+            const userIndex = db.users.findIndex(u => String(u.email).toLowerCase() === String(entry.email).toLowerCase());
+            if (userIndex !== -1) {
+              db.users.splice(userIndex, 1);
+            }
+          }
+          
           return false; // Remove permanently
         }
       }

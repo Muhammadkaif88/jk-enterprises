@@ -212,7 +212,7 @@ function BrandLogo() {
   );
 }
 
-function DataTable({ columns, rows, onEdit, onDelete, canEdit }) {
+function DataTable({ columns, rows, onEdit, onDelete, canEdit, canDelete = false }) {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
 
@@ -239,7 +239,7 @@ function DataTable({ columns, rows, onEdit, onDelete, canEdit }) {
             {columns.map((column) => (
               <th key={column.key}>{column.label}</th>
             ))}
-            {canEdit ? <th style={{ textAlign: "right" }}>Actions</th> : null}
+            {canEdit || canDelete ? <th style={{ textAlign: "right" }}>Actions</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -276,17 +276,17 @@ function DataTable({ columns, rows, onEdit, onDelete, canEdit }) {
                     )}
                   </td>
                 ))}
-                {canEdit ? (
+                {canEdit || canDelete ? (
                   <td className="td-actions">
-                    {editingId === row.id ? (
+                    {editingId === row.id && canEdit && column?.editable !== false ? (
                       <>
                         <button className="save-row-btn" onClick={handleSave}>Save</button>
                         <button className="cancel-row-btn" onClick={cancelEdit}>Cancel</button>
                       </>
                     ) : (
                       <>
-                        <button className="btn-icon" onClick={() => startEdit(row)}>Edit</button>
-                        <button className="btn-icon delete" onClick={() => onDelete(row.id)}>Delete</button>
+                        {canEdit ? <button className="btn-icon" onClick={() => startEdit(row)}>Edit</button> : null}
+                        {canDelete ? <button className="btn-icon delete" onClick={() => onDelete(row.id)}>Delete</button> : null}
                       </>
                     )}
                   </td>
@@ -295,7 +295,7 @@ function DataTable({ columns, rows, onEdit, onDelete, canEdit }) {
             ))
           ) : (
             <tr>
-              <td colSpan={columns.length + (canEdit ? 1 : 0)} className="empty-cell">
+              <td colSpan={columns.length + (canEdit || canDelete ? 1 : 0)} className="empty-cell">
                 No records yet.
               </td>
             </tr>
@@ -1209,7 +1209,7 @@ export default function App() {
                       { key: "lowStockThreshold", label: "Threshold" }
                     ]}
                     rows={overview.lowStock}
-                    canEdit={false}
+                    canEdit={false} canDelete={isAdmin}
                   />
                 </SectionCard>
 
@@ -1288,6 +1288,7 @@ export default function App() {
               ]}
               rows={filteredInventory}
               canEdit={role !== "technician"}
+              canDelete={isAdmin}
               onEdit={(data) => handleAction("PUT", `/inventory/${data.id}`, data)}
               onDelete={(id) => handleAction("DELETE", `/inventory/${id}`)}
             />
@@ -1363,6 +1364,7 @@ export default function App() {
                   ]}
                   rows={filteredFinance}
                   canEdit={role !== "technician"}
+                  canDelete={isAdmin}
                   onEdit={(data) => handleAction("PUT", `/finance/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/finance/${id}`)}
                 />
@@ -1432,6 +1434,7 @@ export default function App() {
                   ]}
                   rows={investments}
                   canEdit={!restrictedFinance}
+                  canDelete={isAdmin}
                   onEdit={(data) => handleAction("PUT", `/investments/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/investments/${id}`)}
                 />
@@ -1608,7 +1611,7 @@ export default function App() {
                         </div>
                         <div className="billing-card-actions">
                           <button className="print-btn" onClick={() => printBill(bill)}>Print</button>
-                          <button className="btn-icon delete" onClick={() => handleAction("DELETE", `/billing/${bill.id}`)}>Delete</button>
+                          {isAdmin ? <button className="btn-icon delete" onClick={() => handleAction("DELETE", `/billing/${bill.id}`)}>Delete</button> : null}
                         </div>
                       </div>
 
@@ -1796,7 +1799,7 @@ export default function App() {
                 { key: "fileCount", label: "Files", editable: false }
               ]}
               rows={filteredProjectRows}
-              canEdit={role !== "technician"}
+              canEdit={role !== "technician"} canDelete={isAdmin}
               onEdit={(data) => handleAction("PUT", `/projects/${data.id}`, data)}
               onDelete={(id) => handleAction("DELETE", `/projects/${id}`)}
             />
@@ -1948,6 +1951,7 @@ export default function App() {
               ]}
               rows={notes}
               canEdit={true}
+              canDelete={isAdmin}
               onEdit={(data) => handleAction("PUT", `/notes/${data.id}`, data)}
               onDelete={(id) => handleAction("DELETE", `/notes/${id}`)}
             />
@@ -2140,7 +2144,7 @@ export default function App() {
                   { key: "attendanceStatus", label: "Current Status", editable: false }
                 ]}
                 rows={team}
-                canEdit={role === "admin"}
+                canEdit={role === "admin"} canDelete={isAdmin}
                 onEdit={(data) => handleAction("PUT", `/team/${data.id}`, data)}
                 onDelete={(id) => handleAction("DELETE", `/team/${id}`)}
               />
@@ -2281,7 +2285,7 @@ export default function App() {
                     { key: "dayApprovalStatus", label: "Day Approval", editable: false }
                   ]}
                   rows={visibleAttendanceRows}
-                  canEdit={false}
+                  canEdit={false} canDelete={isAdmin}
                   onEdit={(data) => handleAction("PUT", `/staff-tracking/attendance/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/staff-tracking/attendance/${id}`)}
                 />
@@ -2328,7 +2332,7 @@ export default function App() {
                     { key: "response", label: "Response" }
                   ]}
                   rows={visibleDoubtRows}
-                  canEdit={role !== "technician"}
+                  canEdit={role !== "technician"} canDelete={isAdmin}
                   onEdit={(data) => handleAction("PUT", `/staff-tracking/doubts/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/staff-tracking/doubts/${id}`)}
                 />
@@ -2371,7 +2375,7 @@ export default function App() {
                     { key: "resolution", label: "Resolution" }
                   ]}
                   rows={visibleComplaintRows}
-                  canEdit={role !== "technician"}
+                  canEdit={role !== "technician"} canDelete={isAdmin}
                   onEdit={(data) => handleAction("PUT", `/staff-tracking/complaints/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/staff-tracking/complaints/${id}`)}
                 />
@@ -2559,7 +2563,7 @@ export default function App() {
                     <DataTable
                       columns={taskColumns}
                       rows={tasks}
-                      canEdit={role !== "technician"}
+                      canEdit={role !== "technician"} canDelete={isAdmin}
                       onEdit={(data) => handleAction("PUT", `/tasks/${data.id}`, data)}
                       onDelete={(id) => handleAction("DELETE", `/tasks/${id}`)}
                     />

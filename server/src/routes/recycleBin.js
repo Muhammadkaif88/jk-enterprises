@@ -144,6 +144,15 @@ recycleBinRouter.delete("/:collection/:id/permanent", authorize("admin"), (req, 
 
   const deletedItem = db[collection][index];
   db[collection].splice(index, 1);
+  
+  if (collection === "staff") {
+    // Completely remove the linked user account to prevent regeneration
+    const userIndex = db.users.findIndex(u => String(u.email).toLowerCase() === String(deletedItem.email).toLowerCase());
+    if (userIndex !== -1) {
+      db.users.splice(userIndex, 1);
+    }
+  }
+
   writeDb(db);
 
   res.json({
@@ -165,6 +174,14 @@ recycleBinRouter.post("/cleanup/execute", authorize("admin"), (req, res) => {
     db[collection] = db[collection].filter((entry) => {
       if (entry.isDeleted && isOlderThanDays(entry.deletedAt, 10)) {
         totalPermanentlyDeleted++;
+        
+        if (collection === "staff") {
+          const userIndex = db.users.findIndex(u => String(u.email).toLowerCase() === String(entry.email).toLowerCase());
+          if (userIndex !== -1) {
+            db.users.splice(userIndex, 1);
+          }
+        }
+        
         return false; // Remove from array
       }
       return true; // Keep in array
@@ -202,6 +219,14 @@ recycleBinRouter.post("/empty-all", authorize("admin"), (req, res) => {
     db[collection] = db[collection].filter((entry) => {
       if (entry.isDeleted === true) {
         totalDeleted++;
+        
+        if (collection === "staff") {
+          const userIndex = db.users.findIndex(u => String(u.email).toLowerCase() === String(entry.email).toLowerCase());
+          if (userIndex !== -1) {
+            db.users.splice(userIndex, 1);
+          }
+        }
+
         return false;
       }
       return true;
