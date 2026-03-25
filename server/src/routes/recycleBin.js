@@ -5,7 +5,7 @@ import { getRequestedCompanyId } from "../services/companyScope.js";
 
 export const recycleBinRouter = Router();
 
-const COLLECTIONS = ["inventory", "finance", "billing", "projects", "tasks", "investments", "notes", "attendanceLogs", "doubtClearance", "complaints"];
+const COLLECTIONS = ["inventory", "finance", "billing", "projects", "tasks", "investments", "notes", "attendanceLogs", "doubtClearance", "complaints", "staff"];
 
 function isOlderThanDays(timestamp, days = 10) {
   if (!timestamp) return false;
@@ -32,7 +32,7 @@ recycleBinRouter.get("/", authorize("admin"), (req, res) => {
         collection,
         companyId: entry.companyId,
         companyName: entry.companyName || "Unknown",
-        name: entry.partName || entry.title || entry.invoiceNumber || entry.staffName || entry.subject || "Unnamed Item",
+        name: entry.partName || entry.title || entry.invoiceNumber || entry.staffName || entry.fullName || entry.subject || "Unnamed Item",
         deletedAt: entry.deletedAt,
         deletedBy: entry.deletedBy || "system",
         daysInBin: Math.floor((new Date() - new Date(entry.deletedAt)) / (1000 * 60 * 60 * 24)),

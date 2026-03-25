@@ -25,7 +25,8 @@ function buildUserAccount(member, password) {
 teamRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
   syncAttendanceStatuses(db);
-  res.json(scopeRecords(db.staff, getRequestedCompanyId(req)));
+  const activeStaff = db.staff.filter((entry) => entry.isDeleted !== true);
+  res.json(scopeRecords(activeStaff, getRequestedCompanyId(req)));
 });
 
 teamRouter.post("/", authorize("admin"), (req, res) => {
@@ -108,12 +109,16 @@ teamRouter.delete("/:id", authorize("admin"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
   const member = db.staff.find((entry) => entry.id === id);
-  db.staff = db.staff.filter((entry) => entry.id !== id);
-  if (member) {
-    db.users = db.users.filter(
-      (entry) => String(entry.email || "").toLowerCase() !== String(member.email || "").toLowerCase()
-    );
+  
+  if (!member) {
+    return res.status(404).json({ message: "Staff member not found." });
   }
+  
+  // Soft delete: mark as deleted instead of removing
+  member.isDeleted = true;
+  member.deletedAt = new Date().toISOString();
+  member.deletedBy = req.header("x-user-email") || "admin";
+  
   writeDb(db);
-  res.status(204).send();
+  res.status(200).json({ message: "Staff member moved to recycle bin" });
 });
