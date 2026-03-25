@@ -44,12 +44,14 @@ function applyAttendanceWorkSummary(record) {
   record.workedMinutes = workedMinutes;
   record.workedDuration = formatWorkedDuration(workedMinutes);
 
-  if (workedMinutes >= 420) {
+  if (workedMinutes >= 540) {
     record.dayApprovalStatus = "Full Day Approved";
-  } else if (workedMinutes >= 300) {
+  } else if (workedMinutes >= 480) {
     record.dayApprovalStatus = "3/4 Day Approved";
-  } else {
+  } else if (workedMinutes >= 420) {
     record.dayApprovalStatus = "Half Day Approved";
+  } else {
+    record.dayApprovalStatus = "Not Approved";
   }
 
   return record;

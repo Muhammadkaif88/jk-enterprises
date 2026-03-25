@@ -21,8 +21,8 @@ notesRouter.post("/", authorize("technician"), (req, res) => {
     companyId: company.id,
     companyName: company.name,
     title: req.body.title,
-    content: req.body.content,
-    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+    details: req.body.details || "",
+    ideaFiles: req.body.ideaFiles || [],
     isConverted: false,
     createdAt: new Date().toISOString()
   };
@@ -39,8 +39,8 @@ notesRouter.put("/:id", authorize("technician"), (req, res) => {
   }
   Object.assign(note, {
     title: req.body.title ?? note.title,
-    content: req.body.content ?? note.content,
-    tags: req.body.tags ?? note.tags,
+    details: req.body.details ?? note.details,
+    ideaFiles: req.body.ideaFiles ?? note.ideaFiles,
     isConverted: req.body.isConverted ?? note.isConverted
   });
   writeDb(db);

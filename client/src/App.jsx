@@ -1914,18 +1914,25 @@ export default function App() {
           <SectionCard title="Idea Lab" kicker="Engineering notes">
             <form
               className="form-grid"
-              onSubmit={(event) => {
+              onSubmit={async (event) => {
                 event.preventDefault();
-                const data = Object.fromEntries(new FormData(event.target));
-                if (data.tags) {
-                  data.tags = data.tags.split(",").map((tag) => tag.trim());
-                }
-                handleAction("POST", "/notes", withSelectedCompany(data));
+                const formData = new FormData(event.target);
+                const data = {
+                  title: formData.get("title"),
+                  details: formData.get("details"),
+                  ideaFiles: await filesToDataUrls(event.target.ideaFiles.files)
+                };
+                await handleAction("POST", "/notes", withSelectedCompany(data));
                 event.target.reset();
               }}
             >
               <input name="title" placeholder="Idea title" required />
-              <input name="tags" placeholder="Tags (comma separated)" />
+              <textarea name="details" placeholder="Idea details and explanation" className="wide" rows="3" />
+              <div className="upload-box wide">
+                <span>Upload idea details</span>
+                <small>Supporting documents and images</small>
+                <input name="ideaFiles" type="file" multiple />
+              </div>
               <button type="submit">Save Idea</button>
             </form>
 
@@ -1933,7 +1940,8 @@ export default function App() {
               columns={[
                 ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
                 { key: "title", label: "Title" },
-                { key: "tags", label: "Tags", render: (row) => (row.tags || []).join(", ") }
+                { key: "details", label: "Explanation" },
+                { key: "ideaFiles", label: "Files", editable: false, render: (row) => `${(row.ideaFiles || []).length} file(s)` }
               ]}
               rows={notes}
               canEdit={true}
