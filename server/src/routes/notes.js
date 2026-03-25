@@ -7,7 +7,8 @@ export const notesRouter = Router();
 
 notesRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.notes, getRequestedCompanyId(req)));
+  const active = db.notes.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 notesRouter.post("/", authorize("technician"), (req, res) => {
@@ -50,7 +51,15 @@ notesRouter.put("/:id", authorize("technician"), (req, res) => {
 notesRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
-  db.notes = db.notes.filter((entry) => entry.id !== id);
+  const note = db.notes.find((entry) => entry.id === id);
+  
+  if (!note) {
+    return res.status(404).json({ message: "Idea note not found." });
+  }
+  
+  note.isDeleted = true;
+  note.deletedAt = new Date().toISOString();
+  note.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });

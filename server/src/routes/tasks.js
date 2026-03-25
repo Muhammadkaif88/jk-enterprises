@@ -40,7 +40,8 @@ export const tasksRouter = Router();
 
 tasksRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.tasks, getRequestedCompanyId(req)));
+  const active = db.tasks.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 tasksRouter.post("/", authorize("technician"), (req, res) => {
@@ -125,7 +126,15 @@ tasksRouter.put("/:id", authorize("technician"), (req, res) => {
 
 tasksRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
-  db.tasks = db.tasks.filter((entry) => entry.id !== Number(req.params.id));
+  const task = db.tasks.find((entry) => entry.id === Number(req.params.id));
+  
+  if (!task) {
+    return res.status(404).json({ message: "Task not found." });
+  }
+  
+  task.isDeleted = true;
+  task.deletedAt = new Date().toISOString();
+  task.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });

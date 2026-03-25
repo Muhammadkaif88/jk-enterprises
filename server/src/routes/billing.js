@@ -129,7 +129,8 @@ function applyBillingEffects(db, bill) {
 
 billingRouter.get("/", authorize("manager"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.billing, getRequestedCompanyId(req)));
+  const active = db.billing.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 billingRouter.post("/", authorize("technician"), (req, res) => {
@@ -207,8 +208,9 @@ billingRouter.delete("/:id", authorize("technician"), (req, res) => {
   if (!bill) {
     return res.status(404).json({ message: "Billing entry not found." });
   }
-  revertBillingEffects(db, bill);
-  db.billing = db.billing.filter((entry) => entry.id !== Number(req.params.id));
+  bill.isDeleted = true;
+  bill.deletedAt = new Date().toISOString();
+  bill.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });

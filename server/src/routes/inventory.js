@@ -7,7 +7,8 @@ export const inventoryRouter = Router();
 
 inventoryRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.inventory, getRequestedCompanyId(req)));
+  const active = db.inventory.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 inventoryRouter.post("/", authorize("technician"), (req, res) => {
@@ -63,7 +64,16 @@ inventoryRouter.put("/:id", authorize("technician"), (req, res) => {
 inventoryRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
-  db.inventory = db.inventory.filter((entry) => entry.id !== id);
+  const item = db.inventory.find((entry) => entry.id === id);
+  
+  if (!item) {
+    return res.status(404).json({ message: "Inventory item not found." });
+  }
+  
+  item.isDeleted = true;
+  item.deletedAt = new Date().toISOString();
+  item.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });
+

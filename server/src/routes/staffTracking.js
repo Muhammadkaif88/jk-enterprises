@@ -63,9 +63,12 @@ staffTrackingRouter.get("/summary", authorize("technician"), (req, res) => {
   const db = readDb();
   const companyId = getRequestedCompanyId(req);
   const today = getIndiaDateKey();
-  const attendance = scopeRecords(db.attendanceLogs, companyId);
-  const doubts = scopeRecords(db.doubtClearance, companyId);
-  const complaints = scopeRecords(db.complaints, companyId);
+  const activeAttendance = db.attendanceLogs.filter((entry) => !entry.isDeleted);
+  const activeDoubts = db.doubtClearance.filter((entry) => !entry.isDeleted);
+  const activeComplaints = db.complaints.filter((entry) => !entry.isDeleted);
+  const attendance = scopeRecords(activeAttendance, companyId);
+  const doubts = scopeRecords(activeDoubts, companyId);
+  const complaints = scopeRecords(activeComplaints, companyId);
   const todayAttendance = attendance.filter((entry) => entry.date === today);
 
   res.json({
@@ -79,7 +82,8 @@ staffTrackingRouter.get("/summary", authorize("technician"), (req, res) => {
 
 staffTrackingRouter.get("/attendance", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.attendanceLogs, getRequestedCompanyId(req)));
+  const active = db.attendanceLogs.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 staffTrackingRouter.post("/attendance", authorize("technician"), (req, res) => {
@@ -168,7 +172,13 @@ staffTrackingRouter.put("/attendance/:id", authorize("manager"), (req, res) => {
 
 staffTrackingRouter.delete("/attendance/:id", authorize("manager"), (req, res) => {
   const db = readDb();
-  db.attendanceLogs = db.attendanceLogs.filter((entry) => entry.id !== Number(req.params.id));
+  const record = db.attendanceLogs.find((entry) => entry.id === Number(req.params.id));
+  if (!record) {
+    return res.status(404).json({ message: "Attendance record not found." });
+  }
+  record.isDeleted = true;
+  record.deletedAt = new Date().toISOString();
+  record.deletedBy = req.body.email || "system";
   syncAttendanceStatuses(db);
   writeDb(db);
   res.status(204).send();
@@ -176,7 +186,8 @@ staffTrackingRouter.delete("/attendance/:id", authorize("manager"), (req, res) =
 
 staffTrackingRouter.get("/doubts", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.doubtClearance, getRequestedCompanyId(req)));
+  const active = db.doubtClearance.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 staffTrackingRouter.post("/doubts", authorize("technician"), (req, res) => {
@@ -229,14 +240,21 @@ staffTrackingRouter.put("/doubts/:id", authorize("manager"), (req, res) => {
 
 staffTrackingRouter.delete("/doubts/:id", authorize("manager"), (req, res) => {
   const db = readDb();
-  db.doubtClearance = db.doubtClearance.filter((entry) => entry.id !== Number(req.params.id));
+  const item = db.doubtClearance.find((entry) => entry.id === Number(req.params.id));
+  if (!item) {
+    return res.status(404).json({ message: "Doubt entry not found." });
+  }
+  item.isDeleted = true;
+  item.deletedAt = new Date().toISOString();
+  item.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });
 
 staffTrackingRouter.get("/complaints", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.complaints, getRequestedCompanyId(req)));
+  const active = db.complaints.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 staffTrackingRouter.post("/complaints", authorize("technician"), (req, res) => {
@@ -284,7 +302,13 @@ staffTrackingRouter.put("/complaints/:id", authorize("manager"), (req, res) => {
 
 staffTrackingRouter.delete("/complaints/:id", authorize("manager"), (req, res) => {
   const db = readDb();
-  db.complaints = db.complaints.filter((entry) => entry.id !== Number(req.params.id));
+  const item = db.complaints.find((entry) => entry.id === Number(req.params.id));
+  if (!item) {
+    return res.status(404).json({ message: "Complaint not found." });
+  }
+  item.isDeleted = true;
+  item.deletedAt = new Date().toISOString();
+  item.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });

@@ -7,12 +7,14 @@ export const financeRouter = Router();
 
 financeRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.finance, getRequestedCompanyId(req)));
+  const active = db.finance.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 financeRouter.get("/summary", authorize("technician"), (req, res) => {
   const db = readDb();
-  const scopedFinance = scopeRecords(db.finance, getRequestedCompanyId(req));
+  const allFinance = db.finance.filter((entry) => !entry.isDeleted);
+  const scopedFinance = scopeRecords(allFinance, getRequestedCompanyId(req));
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
   const monthKey = todayKey.slice(0, 7);
@@ -96,7 +98,15 @@ financeRouter.put("/:id", authorize("technician"), (req, res) => {
 financeRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
-  db.finance = db.finance.filter((entry) => entry.id !== id);
+  const entry = db.finance.find((entry) => entry.id === id);
+  
+  if (!entry) {
+    return res.status(404).json({ message: "Finance record not found." });
+  }
+  
+  entry.isDeleted = true;
+  entry.deletedAt = new Date().toISOString();
+  entry.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });

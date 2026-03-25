@@ -7,7 +7,8 @@ export const projectsRouter = Router();
 
 projectsRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.projects, getRequestedCompanyId(req)));
+  const active = db.projects.filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 projectsRouter.post("/", authorize("technician"), (req, res) => {
@@ -102,7 +103,15 @@ projectsRouter.put("/:id", authorize("technician"), (req, res) => {
 projectsRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
-  db.projects = db.projects.filter((entry) => entry.id !== id);
+  const project = db.projects.find((entry) => entry.id === id);
+  
+  if (!project) {
+    return res.status(404).json({ message: "Project not found." });
+  }
+  
+  project.isDeleted = true;
+  project.deletedAt = new Date().toISOString();
+  project.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });

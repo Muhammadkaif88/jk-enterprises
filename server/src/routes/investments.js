@@ -7,7 +7,8 @@ export const investmentsRouter = Router();
 
 investmentsRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
-  res.json(scopeRecords(db.investments || [], getRequestedCompanyId(req)));
+  const active = (db.investments || []).filter((entry) => !entry.isDeleted);
+  res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
 investmentsRouter.post("/", authorize("technician"), (req, res) => {
@@ -59,7 +60,13 @@ investmentsRouter.put("/:id", authorize("technician"), (req, res) => {
 
 investmentsRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
-  db.investments = (db.investments || []).filter((entry) => entry.id !== Number(req.params.id));
+  const record = (db.investments || []).find((entry) => entry.id === Number(req.params.id));
+  if (!record) {
+    return res.status(404).json({ message: "Investment record not found." });
+  }
+  record.isDeleted = true;
+  record.deletedAt = new Date().toISOString();
+  record.deletedBy = req.body.email || "system";
   writeDb(db);
   res.status(204).send();
 });
