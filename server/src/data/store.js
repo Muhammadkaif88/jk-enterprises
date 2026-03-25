@@ -565,11 +565,43 @@ function normalizeAttendanceLog(entry) {
 
 function normalizeDb(data) {
   currentCompanies = data.companies || seedData.companies;
+
+  // Build initial staff list from stored data
+  const staffList = (data.staff || seedData.staff).map(normalizeStaff);
+  const staffEmails = new Set(staffList.map((s) => String(s.email || "").toLowerCase()));
+
+  // Backfill: create staff profiles for approved users who have none
+  const users = (data.users || seedData.users).map(normalizeUser);
+  let maxStaffId = staffList.reduce((max, s) => Math.max(max, Number(s.id) || 0), 0);
+  for (const user of users) {
+    if (user.approvalStatus !== "approved") continue;
+    const email = String(user.email || "").toLowerCase();
+    if (staffEmails.has(email)) continue;
+    staffEmails.add(email);
+    maxStaffId += 1;
+    staffList.push(
+      normalizeStaff({
+        id: maxStaffId,
+        companyId: user.companyId || null,
+        companyName: user.companyName || "",
+        fullName: user.fullName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        role: user.role || "technician",
+        staffCategory: user.staffCategory || "",
+        expertise: "",
+        attendanceStatus: "Pending Assignment",
+        assignedTask: "",
+        salary: 0
+      })
+    );
+  }
+
   return {
     ...seedData,
     ...data,
     companies: currentCompanies,
-    staff: (data.staff || seedData.staff).map(normalizeStaff),
+    staff: staffList,
     inventory: (data.inventory || seedData.inventory).map((entry) => withCompany(entry)),
     finance: (data.finance || seedData.finance).map((entry) => withCompany(entry)),
     projects: (data.projects || seedData.projects).map(normalizeProject),
@@ -580,7 +612,7 @@ function normalizeDb(data) {
     tasks: (data.tasks || seedData.tasks).map(normalizeTask),
     billing: (data.billing || seedData.billing).map(normalizeBillingEntry),
     investments: (data.investments || seedData.investments).map(normalizeInvestment),
-    users: (data.users || seedData.users).map(normalizeUser)
+    users
   };
 }
 
