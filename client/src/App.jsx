@@ -1928,11 +1928,11 @@ export default function App() {
             >
               <input name="title" placeholder="Idea title" required />
               <textarea name="details" placeholder="Idea details and explanation" className="wide" rows="3" />
-              <div className="upload-box wide">
+              <label className="upload-box wide">
                 <span>Upload idea details</span>
                 <small>Supporting documents and images</small>
                 <input name="ideaFiles" type="file" multiple />
-              </div>
+              </label>
               <button type="submit">Save Idea</button>
             </form>
 

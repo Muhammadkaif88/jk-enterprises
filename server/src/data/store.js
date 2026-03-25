@@ -539,6 +539,18 @@ function normalizeInvestment(entry) {
   });
 }
 
+function normalizeNote(entry) {
+  const note = withCompany(entry);
+  if (!note.details && note.content) {
+    note.details = note.content;
+    if (note.tags && note.tags.length) {
+      note.details += "\nTags: " + note.tags.join(", ");
+    }
+  }
+  note.ideaFiles = note.ideaFiles || [];
+  return note;
+}
+
 function normalizeAttendanceLog(entry) {
   return withCompany({
     checkIn: "",
@@ -561,7 +573,7 @@ function normalizeDb(data) {
     inventory: (data.inventory || seedData.inventory).map((entry) => withCompany(entry)),
     finance: (data.finance || seedData.finance).map((entry) => withCompany(entry)),
     projects: (data.projects || seedData.projects).map(normalizeProject),
-    notes: (data.notes || seedData.notes).map((entry) => withCompany(entry)),
+    notes: (data.notes || seedData.notes).map(normalizeNote),
     attendanceLogs: (data.attendanceLogs || seedData.attendanceLogs).map(normalizeAttendanceLog),
     doubtClearance: (data.doubtClearance || seedData.doubtClearance).map((entry) => withCompany(entry)),
     complaints: (data.complaints || seedData.complaints).map((entry) => withCompany(entry)),
