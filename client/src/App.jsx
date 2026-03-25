@@ -393,6 +393,7 @@ export default function App() {
   const [inventorySearch, setInventorySearch] = useState("");
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [projectSearch, setProjectSearch] = useState("");
   const [taskView, setTaskView] = useState("add");
   const [staffTrackingView, setStaffTrackingView] = useState("home");
@@ -1948,6 +1949,67 @@ export default function App() {
               onEdit={(data) => handleAction("PUT", `/notes/${data.id}`, data)}
               onDelete={(id) => handleAction("DELETE", `/notes/${id}`)}
             />
+
+            <div className="project-card-grid">
+              {notes.length ? (
+                notes.map((note) => (
+                  <article
+                    key={note.id}
+                    className={`project-card${selectedNoteId === note.id ? " active" : ""}`}
+                  >
+                    <div className="project-card-head">
+                      <div>
+                        <p className="kicker">Idea</p>
+                        <h3>{note.title}</h3>
+                      </div>
+                      <button type="button" className="project-open-btn" onClick={() => setSelectedNoteId(selectedNoteId === note.id ? null : note.id)}>
+                        {selectedNoteId === note.id ? "Close" : "Open"}
+                      </button>
+                    </div>
+                    <div className="project-block">
+                      <strong>Details</strong>
+                      <p>{note.details ? note.details.slice(0, 120) + (note.details.length > 120 ? "…" : "") : "No details added."}</p>
+                    </div>
+                    <div className="project-block">
+                      <strong>Files</strong>
+                      <p>{(note.ideaFiles || []).length} attachment(s)</p>
+                    </div>
+                    <div className="project-block">
+                      <strong>Saved On</strong>
+                      <p>{new Date(note.createdAt).toLocaleDateString("en-IN")}</p>
+                    </div>
+
+                    {selectedNoteId === note.id ? (
+                      <div className="project-document" style={{ marginTop: 0 }}>
+                        <div className="project-document-section">
+                          <strong>Full Details</strong>
+                          <p style={{ whiteSpace: "pre-wrap" }}>{note.details || "No details added."}</p>
+                        </div>
+                        {(note.ideaFiles || []).length ? (
+                          <div className="project-document-section">
+                            <strong>Uploaded Files</strong>
+                            <div className="project-file-grid">
+                              {note.ideaFiles.map((file, index) => (
+                                <div key={`${note.id}-file-${index}`} className="project-file-card">
+                                  {String(file.type || "").startsWith("image/") ? (
+                                    <img src={file.dataUrl} alt={file.name || `File ${index + 1}`} />
+                                  ) : (
+                                    <div className="project-file-icon">FILE</div>
+                                  )}
+                                  <a href={file.dataUrl} download={file.name || `idea-file-${index + 1}`}>{file.name || `File ${index + 1}`}</a>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </article>
+                ))
+              ) : (
+                <div className="task-empty">No ideas saved yet.</div>
+              )}
+            </div>
           </SectionCard>
         ) : null}
 
@@ -2051,6 +2113,14 @@ export default function App() {
                       </option>
                     ))}
                   </select>
+                  {isAdmin ? (
+                    <select name="companyId" required defaultValue="">
+                      <option value="" disabled>Select company</option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>{company.name}</option>
+                      ))}
+                    </select>
+                  ) : null}
                   <button type="submit">Add Staff</button>
                 </form>
               ) : (
