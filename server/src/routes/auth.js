@@ -172,3 +172,39 @@ authRouter.post("/pending/:id/reject", authorize("admin"), (req, res) => {
   const { password: _, ...userWithoutPassword } = user;
   res.json(userWithoutPassword);
 });
+
+// Set user role to admin (admin only)
+authRouter.post("/users/:id/set-admin", authorize("admin"), (req, res) => {
+  const db = readDb();
+  const user = db.users.find((entry) => entry.id === Number(req.params.id));
+  if (!user) {
+    return res.status(404).json({ message: "User not found." });
+  }
+
+  user.role = "admin";
+  writeDb(db);
+  
+  const { password: _, ...userWithoutPassword } = user;
+  res.json({
+    message: "User promoted to admin role",
+    user: userWithoutPassword
+  });
+});
+
+// Remove admin role (admin only)
+authRouter.post("/users/:id/remove-admin", authorize("admin"), (req, res) => {
+  const db = readDb();
+  const user = db.users.find((entry) => entry.id === Number(req.params.id));
+  if (!user) {
+    return res.status(404).json({ message: "User not found." });
+  }
+
+  user.role = user.staffCategory === "Manager" ? "manager" : "technician";
+  writeDb(db);
+  
+  const { password: _, ...userWithoutPassword } = user;
+  res.json({
+    message: "Admin role removed from user",
+    user: userWithoutPassword
+  });
+});

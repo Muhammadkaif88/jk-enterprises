@@ -12,6 +12,8 @@ import { companiesRouter } from "./routes/companies.js";
 import { tasksRouter } from "./routes/tasks.js";
 import { billingRouter } from "./routes/billing.js";
 import { investmentsRouter } from "./routes/investments.js";
+import { recycleBinRouter } from "./routes/recycleBin.js";
+import { readDb, writeDb } from "./data/store.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -36,6 +38,44 @@ app.use("/api/companies", companiesRouter);
 app.use("/api/tasks", tasksRouter);
 app.use("/api/billing", billingRouter);
 app.use("/api/investments", investmentsRouter);
+app.use("/api/recycle-bin", recycleBinRouter);
+
+// Auto-cleanup function - runs every 24 hours
+function runAutoCleanup() {
+  const COLLECTIONS = ["inventory", "finance", "billing", "projects", "tasks", "investments", "notes", "attendanceLogs", "doubtClearance", "complaints"];
+  const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
+  const db = readDb();
+  let totalCleaned = 0;
+
+  for (const collection of COLLECTIONS) {
+    if (!Array.isArray(db[collection])) continue;
+
+    const initialLength = db[collection].length;
+    db[collection] = db[collection].filter((entry) => {
+      if (entry.isDeleted === true && entry.deletedAt) {
+        const deletedTime = new Date(entry.deletedAt).getTime();
+        const now = new Date().getTime();
+        if (now - deletedTime > TEN_DAYS_MS) {
+          totalCleaned++;
+          return false; // Remove permanently
+        }
+      }
+      return true; // Keep
+    });
+  }
+
+  if (totalCleaned > 0) {
+    writeDb(db);
+    console.log(`[Auto Cleanup] Permanently deleted ${totalCleaned} expired items from recycle bin`);
+  }
+}
+
+// Schedule cleanup every 24 hours
+setInterval(runAutoCleanup, 24 * 60 * 60 * 1000);
+
+// Run cleanup on server startup
+runAutoCleanup();
 
 app.listen(port, () => {
   console.log(`ERMS API listening on http://localhost:${port}`);
