@@ -43,7 +43,7 @@ tasksRouter.get("/", authorize("technician"), (req, res) => {
   res.json(scopeRecords(db.tasks, getRequestedCompanyId(req)));
 });
 
-tasksRouter.post("/", authorize("manager"), (req, res) => {
+tasksRouter.post("/", authorize("technician"), (req, res) => {
   const db = readDb();
   const company = resolveCompany(db, req.body.companyId);
   if (!company) {
@@ -123,7 +123,7 @@ tasksRouter.put("/:id", authorize("technician"), (req, res) => {
   res.json(task);
 });
 
-tasksRouter.delete("/:id", authorize("manager"), (req, res) => {
+tasksRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   db.tasks = db.tasks.filter((entry) => entry.id !== Number(req.params.id));
   writeDb(db);

@@ -10,7 +10,7 @@ inventoryRouter.get("/", authorize("technician"), (req, res) => {
   res.json(scopeRecords(db.inventory, getRequestedCompanyId(req)));
 });
 
-inventoryRouter.post("/", authorize("manager"), (req, res) => {
+inventoryRouter.post("/", authorize("technician"), (req, res) => {
   const db = readDb();
   const company = resolveCompany(db, req.body.companyId);
   if (!company) {
@@ -60,7 +60,7 @@ inventoryRouter.put("/:id", authorize("technician"), (req, res) => {
   res.json(item);
 });
 
-inventoryRouter.delete("/:id", authorize("manager"), (req, res) => {
+inventoryRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
   db.inventory = db.inventory.filter((entry) => entry.id !== id);

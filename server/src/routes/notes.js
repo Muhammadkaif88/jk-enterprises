@@ -47,7 +47,7 @@ notesRouter.put("/:id", authorize("technician"), (req, res) => {
   res.json(note);
 });
 
-notesRouter.delete("/:id", authorize("manager"), (req, res) => {
+notesRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
   db.notes = db.notes.filter((entry) => entry.id !== id);

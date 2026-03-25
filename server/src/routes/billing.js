@@ -132,7 +132,7 @@ billingRouter.get("/", authorize("manager"), (req, res) => {
   res.json(scopeRecords(db.billing, getRequestedCompanyId(req)));
 });
 
-billingRouter.post("/", authorize("manager"), (req, res) => {
+billingRouter.post("/", authorize("technician"), (req, res) => {
   const db = readDb();
   const company = resolveCompany(db, req.body.companyId);
   if (!company) {
@@ -169,7 +169,7 @@ billingRouter.post("/", authorize("manager"), (req, res) => {
   res.status(201).json(bill);
 });
 
-billingRouter.put("/:id", authorize("manager"), (req, res) => {
+billingRouter.put("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const bill = db.billing.find((entry) => entry.id === Number(req.params.id));
   if (!bill) {
@@ -201,7 +201,7 @@ billingRouter.put("/:id", authorize("manager"), (req, res) => {
   res.json(bill);
 });
 
-billingRouter.delete("/:id", authorize("manager"), (req, res) => {
+billingRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const bill = db.billing.find((entry) => entry.id === Number(req.params.id));
   if (!bill) {

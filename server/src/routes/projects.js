@@ -10,7 +10,7 @@ projectsRouter.get("/", authorize("technician"), (req, res) => {
   res.json(scopeRecords(db.projects, getRequestedCompanyId(req)));
 });
 
-projectsRouter.post("/", authorize("manager"), (req, res) => {
+projectsRouter.post("/", authorize("technician"), (req, res) => {
   const db = readDb();
   const company = resolveCompany(db, req.body.companyId);
   if (!company) {
@@ -65,7 +65,7 @@ projectsRouter.post("/", authorize("manager"), (req, res) => {
   res.status(201).json(project);
 });
 
-projectsRouter.put("/:id", authorize("manager"), (req, res) => {
+projectsRouter.put("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const project = db.projects.find((entry) => entry.id === Number(req.params.id));
   if (!project) {
@@ -99,7 +99,7 @@ projectsRouter.put("/:id", authorize("manager"), (req, res) => {
   res.json(project);
 });
 
-projectsRouter.delete("/:id", authorize("manager"), (req, res) => {
+projectsRouter.delete("/:id", authorize("technician"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
   db.projects = db.projects.filter((entry) => entry.id !== id);
