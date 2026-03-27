@@ -46,6 +46,8 @@ export function authorize(minRole) {
       });
     }
     req.userRole = userRole;
+    req.role = userRole;
+    req.user = currentUser;
     next();
   };
 }

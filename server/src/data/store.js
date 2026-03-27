@@ -25,7 +25,8 @@ const seedData = {
       bankName: "Kotak811 Bank",
       accountNumber: "7049752112",
       ifsc: "KKBK0009308",
-      upiId: "8075100930@kotak811"
+      upiId: "8075100930@kotak811",
+      totalValuation: 10000000
     },
     {
       id: 2,
@@ -37,7 +38,8 @@ const seedData = {
       bankName: "Kotak811 Bank",
       accountNumber: "7049752112",
       ifsc: "KKBK0009308",
-      upiId: "8075100930@kotak811"
+      upiId: "8075100930@kotak811",
+      totalValuation: 5000000
     },
     {
       id: 3,
@@ -49,7 +51,8 @@ const seedData = {
       bankName: "Kotak811 Bank",
       accountNumber: "7049752112",
       ifsc: "KKBK0009308",
-      upiId: "8075100930@kotak811"
+      upiId: "8075100930@kotak811",
+      totalValuation: 2000000
     }
   ],
   staff: [
@@ -354,6 +357,7 @@ const seedData = {
       notes: "Initial seating and kitchen setup investment."
     }
   ],
+  salaries: [],
   users: [
     {
       id: 1,
@@ -367,13 +371,21 @@ const seedData = {
       approvedAt: "2026-03-20T08:00:00.000Z",
       approvedBy: "System"
     }
-  ]
+  ],
+  investorTransactions: []
 };
 
 let currentCompanies = seedData.companies;
 
 function getCompanyMeta(companyId) {
   return currentCompanies.find((entry) => entry.id === Number(companyId)) || currentCompanies[0];
+}
+
+function normalizeCompany(company) {
+  return {
+    totalValuation: 10000000,
+    ...company
+  };
 }
 
 function withCompany(item, fallbackCompanyId = 1) {
@@ -496,6 +508,25 @@ function normalizeStaff(entry) {
   return withCompany({
     staffCategory: "",
     phone: "",
+    dailyWage: entry.dailyWage || Math.round((entry.salary || 0) / 22),
+    ...entry
+  });
+}
+
+function normalizeSalary(entry) {
+  const baseAmount = Number(entry.baseAmount || (entry.workUnits || 0) * (entry.dailyWage || 0));
+  const finalAmount = entry.finalAmount ?? (baseAmount + Number(entry.bonus || 0) - Number(entry.deduction || 0));
+  
+  return withCompany({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+    workUnits: 0,
+    dailyWage: 0,
+    baseAmount,
+    bonus: 0,
+    deduction: 0,
+    finalAmount,
+    status: "pending",
     ...entry
   });
 }
@@ -535,8 +566,23 @@ function normalizeInvestment(entry) {
     investedDate: "",
     returnDate: "",
     notes: "",
+    equityPct: 0,
     ...entry
   });
+}
+
+function normalizeInvestorTransaction(entry) {
+  return {
+    investorId: null,
+    type: "Investment In", // Investment In / Profit Payout Out
+    amount: 0,
+    method: "Cash", // Cash / UPI
+    upiId: "",
+    transactionId: "",
+    receiptNumber: "",
+    date: new Date().toISOString().slice(0, 10),
+    ...entry
+  };
 }
 
 function normalizeNote(entry) {
@@ -600,7 +646,7 @@ function normalizeDb(data) {
   return {
     ...seedData,
     ...data,
-    companies: currentCompanies,
+    companies: currentCompanies.map(normalizeCompany),
     staff: staffList,
     inventory: (data.inventory || seedData.inventory).map((entry) => withCompany(entry)),
     finance: (data.finance || seedData.finance).map((entry) => withCompany(entry)),
@@ -612,6 +658,8 @@ function normalizeDb(data) {
     tasks: (data.tasks || seedData.tasks).map(normalizeTask),
     billing: (data.billing || seedData.billing).map(normalizeBillingEntry),
     investments: (data.investments || seedData.investments).map(normalizeInvestment),
+    investorTransactions: (data.investorTransactions || seedData.investorTransactions || []).map(normalizeInvestorTransaction),
+    salaries: (data.salaries || seedData.salaries || []).map(normalizeSalary),
     users
   };
 }

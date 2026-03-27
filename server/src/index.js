@@ -13,6 +13,8 @@ import { tasksRouter } from "./routes/tasks.js";
 import { billingRouter } from "./routes/billing.js";
 import { investmentsRouter } from "./routes/investments.js";
 import { recycleBinRouter } from "./routes/recycleBin.js";
+import { adminRouter } from "./routes/admin.js";
+import { salaryRouter } from "./routes/salary.js";
 import { readDb, writeDb } from "./data/store.js";
 
 const app = express();
@@ -39,6 +41,8 @@ app.use("/api/tasks", tasksRouter);
 app.use("/api/billing", billingRouter);
 app.use("/api/investments", investmentsRouter);
 app.use("/api/recycle-bin", recycleBinRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/salaries", salaryRouter);
 
 // Auto-cleanup function - runs every 24 hours
 function runAutoCleanup() {

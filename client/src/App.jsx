@@ -12,6 +12,7 @@ const sections = [
   { id: "notes", icon: "ID", label: "Idea Lab" },
   { id: "team", icon: "TM", label: "Team" },
   { id: "staffTracking", icon: "ST", label: "Staff Tracking" },
+  { id: "salary", icon: "SY", label: "Staff Salary" },
   { id: "tasks", icon: "TK", label: "Tasks" },
   { id: "recycleBin", icon: "DB", label: "Deleted Items" }
 ];
@@ -28,14 +29,14 @@ const staffRoleOptions = [
 
 const sectionAccessByRole = {
   admin: sections.map((section) => section.id),
-  manager: ["inventory", "finance", "investments", "billing", "projects", "notes", "team", "staffTracking", "tasks"],
-  "Account Staff": ["inventory", "finance", "investments", "billing", "staffTracking", "tasks"],
-  Accountant: ["inventory", "finance", "investments", "billing", "staffTracking", "tasks"],
+  manager: ["inventory", "finance", "investments", "billing", "projects", "notes", "team", "staffTracking", "salary", "tasks"],
+  "Account Staff": ["inventory", "finance", "investments", "billing", "staffTracking", "salary", "tasks"],
+  Accountant: ["inventory", "finance", "investments", "billing", "staffTracking", "salary", "tasks"],
   Trainer: ["inventory", "projects", "notes", "team", "staffTracking", "tasks"],
   Freelancer: ["inventory", "projects", "notes", "team", "tasks"],
   Internship: ["projects", "notes", "team", "staffTracking", "tasks"],
   "Robotic Engineer": ["inventory", "projects", "notes", "team", "staffTracking", "tasks"],
-  technician: ["inventory", "projects", "notes", "team", "staffTracking", "tasks"]
+  technician: ["inventory", "projects", "notes", "team", "staffTracking", "salary", "tasks"]
 };
 
 const companyProfiles = {
@@ -69,9 +70,26 @@ const employeeCategoryOptions = [
 const attendanceStatusOptions = [
   { value: "Pending Assignment", label: "Pending Assignment" },
   { value: "Present", label: "Present" },
+  { value: "Three Quarters", label: "Three Quarters" },
   { value: "Late", label: "Late" },
+  { value: "Half Day", label: "Half Day" },
   { value: "Absent", label: "Absent" },
   { value: "Leave", label: "Leave" }
+];
+
+const months = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" }
 ];
 
 function currency(value) {
@@ -375,6 +393,226 @@ function StaffSelect({ name, team }) {
   );
 }
 
+function InvestmentSection({
+  investments,
+  investorTransactions,
+  selectedInvestorId,
+  setSelectedInvestorId,
+  isTransactionModalOpen,
+  setIsTransactionModalOpen,
+  currency,
+  handleAction,
+  role,
+  isAdmin,
+  selectedCompany,
+  refreshAll
+}) {
+  const [view, setView] = useState("portfolio"); // portfolio, distribution, history
+  const [activeTxInvestor, setActiveTxInvestor] = useState(null);
+
+  const openTransactionModal = (investor) => {
+    setActiveTxInvestor(investor);
+    setIsTransactionModalOpen(true);
+  };
+
+  const closeTransactionModal = () => {
+    setActiveTxInvestor(null);
+    setIsTransactionModalOpen(false);
+  };
+
+  const handleRecordTransaction = async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const data = Object.fromEntries(formData);
+    
+    const result = await handleAction("POST", "/investments/transaction", {
+      ...data,
+      investorId: activeTxInvestor.id
+    });
+
+    if (result) {
+      closeTransactionModal();
+      refreshAll(true);
+    }
+  };
+
+  const selectedInvestorHistory = investments.find(inv => inv.id === selectedInvestorId);
+  const filteredTransactions = investorTransactions.filter(t => t.investorId === selectedInvestorId);
+
+  return (
+    <div className="section-stack">
+      <header className="section-header-row">
+        <div>
+          <p className="kicker">Corporate Funding</p>
+          <h2 className="section-title">Investor & Fund Management</h2>
+        </div>
+        <div className="tab-group">
+          <button className={view === "portfolio" ? "tab-btn active" : "tab-btn"} onClick={() => setView("portfolio")}>Portfolio</button>
+          <button className={view === "distribution" ? "tab-btn active" : "tab-btn"} onClick={() => setView("distribution")}>Profit Split</button>
+          <button className={view === "history" ? "tab-btn active" : "tab-btn"} onClick={() => setView("history")}>History</button>
+        </div>
+      </header>
+
+      {view === "portfolio" && (
+        <>
+          <SectionCard title="Investment Portfolio" kicker="Capital & Equity Tracking">
+            <div className="investor-grid">
+              {investments.map(inv => (
+                <article key={inv.id} className="salary-card investor-card">
+                  <div className="salary-card-header">
+                    <div>
+                      <p className="kicker">Investor</p>
+                      <h3>{inv.investorName}</h3>
+                    </div>
+                    <span className="salary-status-badge pending">{inv.equityPct}% Equity</span>
+                  </div>
+                  
+                  <div className="salary-metrics">
+                    <div className="salary-metric-item">
+                      <span>Total Invested</span>
+                      <strong>{currency(inv.investedFund)}</strong>
+                    </div>
+                    <div className="salary-metric-item">
+                      <span>Total Returned</span>
+                      <strong>{currency(inv.returnedFund)}</strong>
+                    </div>
+                    <div className="salary-metric-item">
+                      <span>ROI</span>
+                      <strong>{inv.cumulativeROI}%</strong>
+                    </div>
+                  </div>
+
+                  <div className="salary-card-actions">
+                    <button className="save-row-btn" onClick={() => openTransactionModal(inv)}>Record Transaction</button>
+                    <button className="btn-icon" onClick={() => { setSelectedInvestorId(inv.id); setView("history"); }}>View History</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <SectionCard title="Register New Investor" kicker="Onboarding">
+              <form className="form-grid" onSubmit={(e) => { e.preventDefault(); handleAction("POST", "/investments", Object.fromEntries(new FormData(e.target))); e.target.reset(); }}>
+                <input name="investorName" placeholder="Investor Name" required />
+                <input name="contactNumber" placeholder="Contact Number" />
+                <input name="investedDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+                <input name="notes" placeholder="Onboarding Notes" className="wide" />
+                <button type="submit">Add Investor</button>
+              </form>
+            </SectionCard>
+          </SectionCard>
+        </>
+      )}
+
+      {view === "distribution" && (
+        <SectionCard title="Profit Distribution" kicker="Automated split based on equity">
+          <div className="distribution-summary-card">
+            <p className="kicker">Current Month Net Profit</p>
+            <h2>{currency(investments[0]?.netProfitForMonth || 0)}</h2>
+            <p className="muted-copy">This profit is split automatically among investors based on their current equity holdings.</p>
+          </div>
+
+          <DataTable
+            columns={[
+              { key: "investorName", label: "Investor" },
+              { key: "equityPct", label: "Share %", render: (row) => `${row.equityPct}%` },
+              { key: "monthlyProfitShare", label: "Profit Share", render: (row) => currency(row.monthlyProfitShare) },
+              {
+                key: "action",
+                label: "Action",
+                render: (row) => <button className="save-row-btn" onClick={() => openTransactionModal(row)}>Pay Dividend</button>
+              }
+            ]}
+            rows={investments}
+            canEdit={false}
+          />
+        </SectionCard>
+      )}
+
+      {view === "history" && (
+        <SectionCard title="Transaction History" kicker={selectedInvestorHistory ? `History for ${selectedInvestorHistory.investorName}` : "Select an investor"}>
+          {!selectedInvestorId ? (
+            <div className="task-empty">Select an investor from the Portfolio tab to view detailed history.</div>
+          ) : (
+            <DataTable
+              columns={[
+                { key: "date", label: "Date" },
+                { key: "type", label: "Type" },
+                { key: "amount", label: "Amount", render: (row) => currency(row.amount) },
+                { key: "method", label: "Method" },
+                { key: "details", label: "Voucher/TXID", render: (row) => row.method === 'UPI' ? row.transactionId : row.receiptNumber }
+              ]}
+              rows={filteredTransactions || []}
+              canEdit={false}
+            />
+          )}
+        </SectionCard>
+      )}
+
+      {isTransactionModalOpen && activeTxInvestor && (
+        <div className="modal-overlay">
+          <div className="salary-edit-modal">
+            <div className="modal-head">
+              <h3>Record Transaction: {activeTxInvestor.investorName}</h3>
+              <button className="btn-icon" onClick={closeTransactionModal}>✕</button>
+            </div>
+            <form onSubmit={handleRecordTransaction} className="form-grid">
+              <div className="form-group wide">
+                <label>Fund Direction</label>
+                <select name="type" required defaultValue="Investment In">
+                  <option value="Investment In">Investment In (Add Capital)</option>
+                  <option value="Profit Payout Out">Profit Payout (Dividend)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Amount (₹)</label>
+                <input name="amount" type="number" required placeholder="0" />
+              </div>
+              <div className="form-group">
+                <label>Date</label>
+                <input name="date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+              </div>
+              <div className="form-group">
+                <label>Payment Method</label>
+                <select name="method" id="method-select" required defaultValue="Cash" onChange={(e) => {
+                  const method = e.target.value;
+                  document.getElementById('upi-fields').style.display = method === 'UPI' ? 'contents' : 'none';
+                  document.getElementById('cash-fields').style.display = method === 'Cash' ? 'contents' : 'none';
+                }}>
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                </select>
+              </div>
+
+              <div id="upi-fields" style={{ display: 'none' }}>
+                <div className="form-group">
+                  <label>UPI ID</label>
+                  <input name="upiId" placeholder="upi@handle" />
+                </div>
+                <div className="form-group">
+                  <label>Transaction ID</label>
+                  <input name="transactionId" placeholder="UTR Number" />
+                </div>
+              </div>
+
+              <div id="cash-fields" style={{ display: 'contents' }}>
+                <div className="form-group wide">
+                  <label>Receipt Number / Handover Note</label>
+                  <input name="receiptNumber" placeholder="Receipt #" />
+                </div>
+              </div>
+
+              <div className="modal-footer wide">
+                <button type="button" className="cancel-row-btn" onClick={closeTransactionModal}>Cancel</button>
+                <button type="submit" className="save-row-btn">Save Transaction & Sync Ledger</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user") || "null"));
   const [token, setToken] = useState(() => localStorage.getItem("token"));
@@ -391,6 +629,9 @@ export default function App() {
   const [financeSearchDate, setFinanceSearchDate] = useState("");
   const [investments, setInvestments] = useState([]);
   const [billing, setBilling] = useState([]);
+  const [investorTransactions, setInvestorTransactions] = useState([]);
+  const [selectedInvestorId, setSelectedInvestorId] = useState(null);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [billingLines, setBillingLines] = useState([{ inventoryId: "", description: "", qty: 1, price: 0 }]);
   const [inventorySearch, setInventorySearch] = useState("");
   const [projects, setProjects] = useState([]);
@@ -409,6 +650,9 @@ export default function App() {
     complaints: [],
     summary: null
   });
+  const [salaries, setSalaries] = useState([]);
+  const [salaryMonth, setSalaryMonth] = useState(new Date().getMonth() + 1);
+  const [salaryYear, setSalaryYear] = useState(new Date().getFullYear());
   const [message, setMessage] = useState("");
   const refreshInFlight = useRef(false);
 
@@ -576,6 +820,17 @@ export default function App() {
         setPendingUsers(await api("/auth/pending"));
       } else {
         setPendingUsers([]);
+      }
+
+      const salaryData = await api(`/salaries?month=${salaryMonth}&year=${salaryYear}`);
+      setSalaries(salaryData);
+
+      if (activeSection === 'investments' && selectedInvestorId) {
+        setInvestorTransactions(await api(`/investments/${selectedInvestorId}/transactions`));
+      } else if (activeSection === 'investments') {
+        // Fetch all transactions briefly if needed, or just keep it simple
+        const allTransactions = await Promise.all(investments.map(inv => api(`/investments/${inv.id}/transactions`)));
+        setInvestorTransactions(allTransactions.flat());
       }
 
       setMessage("");
@@ -1060,6 +1315,60 @@ export default function App() {
     }
   }
 
+  const handleExport = async () => {
+    try {
+      const response = await fetch(`${API_URL}/admin/export`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-role": requestRole,
+          "x-company-id": selectedCompany,
+          "x-user-email": user?.email || ""
+        }
+      });
+      if (!response.ok) throw new Error("Export failed");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "jk_compy_backup.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsText(file);
+      });
+      
+      const payload = JSON.parse(text);
+      if (!payload || !Array.isArray(payload.companies)) {
+        throw new Error("Invalid backup file format.");
+      }
+
+      await handleAction("POST", "/admin/import", payload);
+      setMessage("Data imported successfully! The dashboard has been updated.");
+      refreshAll(true);
+    } catch (error) {
+      setMessage("Import failed: " + error.message);
+    } finally {
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
+  };
+
   function renderEmployeeTaskCard(task) {
     return (
       <article key={task.id} className="task-card">
@@ -1197,6 +1506,37 @@ export default function App() {
                   <TrendChart title="Monthly Profit / Expense" data={overview.monthlyTrend} />
                   <TrendChart title="Yearly Profit / Expense" data={overview.yearlyTrend} />
                 </div>
+
+                <SectionCard title="System Data Management" kicker="Admin global controls">
+                  <div className="project-card-grid">
+                    <article className="project-card">
+                      <div className="project-card-head">
+                        <div>
+                          <p className="kicker">Export</p>
+                          <h3>Download Full Backup</h3>
+                        </div>
+                        <button type="button" className="project-open-btn" onClick={handleExport}>
+                          Download
+                        </button>
+                      </div>
+                      <p className="project-copy">Download a complete JSON backup of the system database, including all companies, inventory, staff, projects, and finance records.</p>
+                    </article>
+                    
+                    <article className="project-card">
+                      <div className="project-card-head">
+                        <div>
+                          <p className="kicker">Import</p>
+                          <h3>Restore / Upload Data</h3>
+                        </div>
+                        <label className="project-open-btn" style={{ cursor: "pointer", textAlign: "center", display: "inline-block", margin: 0, padding: "8px 16px", background: "#f1ede5", color: "#1d1b16", border: "1px solid #d6c6b5", borderRadius: "999px", fontSize: "14px", fontWeight: 500 }}>
+                          Upload JSON
+                          <input type="file" accept="application/json" style={{ display: "none" }} onChange={handleImport} />
+                        </label>
+                      </div>
+                      <p className="project-copy">Upload a previously downloaded JSON backup. <strong>Warning:</strong> This will completely overwrite the existing data!</p>
+                    </article>
+                  </div>
+                </SectionCard>
               </div>
             ) : (
               <div className="two-col">
@@ -1374,73 +1714,20 @@ export default function App() {
         ) : null}
 
         {activeSection === "investments" ? (
-          restrictedFinance ? (
-            <SectionCard title="Investment Desk" kicker="Restricted">
-              <p className="muted-copy">Manager, admin, or account staff access is required for investor fund tracking.</p>
-            </SectionCard>
-          ) : (
-            <div className="section-stack">
-              <section className="stat-grid">
-                <div className="stat-card">
-                  <span>Total Invested</span>
-                  <strong>{currency(investmentSummary.invested)}</strong>
-                </div>
-                <div className="stat-card">
-                  <span>Total Returned</span>
-                  <strong>{currency(investmentSummary.returned)}</strong>
-                </div>
-                <div className="stat-card accent">
-                  <span>Outstanding Balance</span>
-                  <strong>{currency(investmentSummary.balance)}</strong>
-                </div>
-              </section>
-
-              <SectionCard title="Investment Desk" kicker="Investor fund and return tracking">
-                <form
-                  className="form-grid"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const data = Object.fromEntries(new FormData(event.target));
-                    handleAction("POST", "/investments", withSelectedCompany(data));
-                    event.target.reset();
-                  }}
-                >
-                  <input name="investorName" placeholder="Investor name" required />
-                  <input name="contactNumber" placeholder="Contact number" />
-                  <input name="investedDate" type="date" required />
-                  <input name="investedFund" type="number" placeholder="Invested fund" required />
-                  <input name="returnDate" type="date" />
-                  <input name="returnedFund" type="number" placeholder="Returned fund" />
-                  <input name="notes" placeholder="Investment notes" className="wide" />
-                  <button type="submit">Add Investment</button>
-                </form>
-
-                <DataTable
-                  columns={[
-                    ...(showCompanyColumn ? [{ key: "companyName", label: "Company", editable: false }] : []),
-                    { key: "investorName", label: "Investor" },
-                    { key: "contactNumber", label: "Phone" },
-                    { key: "investedDate", label: "Invested Date" },
-                    { key: "investedFund", label: "Invested Fund", type: "number", render: (row) => currency(row.investedFund) },
-                    { key: "returnDate", label: "Return Date" },
-                    { key: "returnedFund", label: "Returned Fund", type: "number", render: (row) => currency(row.returnedFund) },
-                    {
-                      key: "balance",
-                      label: "Balance",
-                      editable: false,
-                      render: (row) => currency(Number(row.investedFund || 0) - Number(row.returnedFund || 0))
-                    },
-                    { key: "notes", label: "Details" }
-                  ]}
-                  rows={investments}
-                  canEdit={!restrictedFinance}
-                  canDelete={isAdmin}
-                  onEdit={(data) => handleAction("PUT", `/investments/${data.id}`, data)}
-                  onDelete={(id) => handleAction("DELETE", `/investments/${id}`)}
-                />
-              </SectionCard>
-            </div>
-          )
+          <InvestmentSection
+            investments={investments}
+            investorTransactions={investorTransactions}
+            selectedInvestorId={selectedInvestorId}
+            setSelectedInvestorId={setSelectedInvestorId}
+            isTransactionModalOpen={isTransactionModalOpen}
+            setIsTransactionModalOpen={setIsTransactionModalOpen}
+            currency={currency}
+            handleAction={handleAction}
+            role={role}
+            isAdmin={isAdmin}
+            selectedCompany={selectedCompany}
+            refreshAll={refreshAll}
+          />
         ) : null}
 
         {activeSection === "billing" ? (
@@ -2019,6 +2306,112 @@ export default function App() {
           </SectionCard>
         ) : null}
 
+        {activeSection === "salary" ? (
+          <div className="section-stack">
+            <SectionCard title="Salary Management" kicker="Automated payroll">
+              <div className="salary-controls">
+                <select value={salaryMonth} onChange={(e) => setSalaryMonth(Number(e.target.value))}>
+                  {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+                <select value={salaryYear} onChange={(e) => setSalaryYear(Number(e.target.value))}>
+                  {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                {canManagePeople && (
+                  <button 
+                    type="button" 
+                    className="save-row-btn"
+                    onClick={() => handleAction("POST", "/salaries/calculate", { month: salaryMonth, year: salaryYear, companyId: selectedCompany })}
+                  >
+                    Sync / Calculate Salaries
+                  </button>
+                )}
+              </div>
+
+              <div className="salary-card-grid" style={{ marginTop: "24px" }}>
+                {salaries.length ? (
+                  salaries.map(salary => (
+                    <article key={salary.id} className="project-card">
+                      <div className="project-card-head">
+                        <div>
+                          <p className="kicker">{salary.companyName}</p>
+                          <h3>{salary.staffName}</h3>
+                        </div>
+                        <span className={`task-badge status-${salary.status}`}>
+                          {salary.status.toUpperCase()}
+                        </span>
+                      </div>
+                      
+                      <div className="salary-metrics">
+                        <div className="salary-metric">
+                          <span>Days Worked</span>
+                          <strong>{salary.workUnits}</strong>
+                        </div>
+                        <div className="salary-metric">
+                          <span>Per Day</span>
+                          <strong>{currency(salary.dailyWage)}</strong>
+                        </div>
+                        <div className="salary-metric accent">
+                          <span>Base Total</span>
+                          <strong>{currency(salary.baseAmount)}</strong>
+                        </div>
+                      </div>
+
+                      {canManagePeople && salary.status !== 'paid' && (
+                        <div className="salary-edit-fields">
+                          <div className="input-group">
+                            <label>Bonus</label>
+                            <input 
+                              type="number" 
+                              defaultValue={salary.bonus} 
+                              onBlur={(e) => handleAction("PATCH", `/salaries/${salary.id}`, { bonus: Number(e.target.value) })}
+                            />
+                          </div>
+                          <div className="input-group">
+                            <label>Deduction</label>
+                            <input 
+                              type="number" 
+                              defaultValue={salary.deduction} 
+                              onBlur={(e) => handleAction("PATCH", `/salaries/${salary.id}`, { deduction: Number(e.target.value) })}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="salary-total-row">
+                        <span>Net Payable</span>
+                        <strong>{currency(salary.finalAmount)}</strong>
+                      </div>
+
+                      {canManagePeople && (
+                        <div className="salary-actions">
+                          {salary.status === 'pending' && (
+                            <button className="save-row-btn" onClick={() => handleAction("POST", `/salaries/${salary.id}/approve`)}>
+                              Approve
+                            </button>
+                          )}
+                          {salary.status === 'approved' && (
+                            <button className="btn-primary" onClick={() => handleAction("POST", `/salaries/${salary.id}/pay`)}>
+                              Mark as Paid
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      
+                      {salary.status === 'paid' && (
+                        <p className="muted-copy" style={{ marginTop: "12px" }}>
+                          Paid on {new Date(salary.paidAt).toLocaleDateString("en-IN")}
+                        </p>
+                      )}
+                    </article>
+                  ))
+                ) : (
+                  <div className="task-empty">No salary records found for this period. Click Sync to generate.</div>
+                )}
+              </div>
+            </SectionCard>
+          </div>
+        ) : null}
+
         {activeSection === "team" ? (
           <div className="section-stack">
             {role === "admin" ? (
@@ -2127,6 +2520,7 @@ export default function App() {
                       ))}
                     </select>
                   ) : null}
+                  <input name="dailyWage" type="number" placeholder="Per Day Wage" required />
                   <button type="submit">Add Staff</button>
                 </form>
               ) : (
@@ -2141,6 +2535,7 @@ export default function App() {
                   ...(isAdmin ? [{ key: "phone", label: "Phone" }] : []),
                   ...(isAdmin ? [{ key: "role", label: "Role", options: teamRoleOptions }] : []),
                   { key: "staffCategory", label: "Category", options: employeeCategoryOptions },
+                  { key: "dailyWage", label: "Daily Wage", type: "number", render: (row) => currency(row.dailyWage) },
                   { key: "attendanceStatus", label: "Current Status", editable: false }
                 ]}
                 rows={team}
