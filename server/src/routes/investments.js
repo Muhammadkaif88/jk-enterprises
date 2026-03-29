@@ -8,7 +8,6 @@ export const investmentsRouter = Router();
 investmentsRouter.get("/", authorize("technician"), (req, res) => {
   const db = readDb();
   const companyId = getRequestedCompanyId(req);
-  const company = db.companies.find(c => c.id === Number(companyId));
   
   // Calculate current month profit
   const now = new Date();
@@ -26,20 +25,19 @@ investmentsRouter.get("/", authorize("technician"), (req, res) => {
   const scoped = scopeRecords(active, companyId);
 
   const results = scoped.map(inv => {
-    const transactions = (db.investorTransactions || []).filter(t => t.investorId === inv.id);
-    const totalInvested = transactions.filter(t => t.type === 'Investment In').reduce((sum, t) => sum + t.amount, 0);
-    const totalPayouts = transactions.filter(t => t.type === 'Profit Payout Out').reduce((sum, t) => sum + t.amount, 0);
+    // We use the manually set values, falling back to 0
+    const explicitInvested = Number(inv.investedFund || 0);
+    const explicitReturned = Number(inv.returnedFund || 0);
+    const explicitEquity = Number(inv.equityPct || 0);
     
-    const companyValuation = company?.totalValuation || 10000000;
-    const equityPct = totalInvested > 0 ? (totalInvested / companyValuation) * 100 : 0;
-    const monthlyProfitShare = netProfit > 0 ? netProfit * (equityPct / 100) : 0;
-    const cumulativeROI = totalInvested > 0 ? (totalPayouts / totalInvested) * 100 : 0;
+    const monthlyProfitShare = netProfit > 0 ? netProfit * (explicitEquity / 100) : 0;
+    const cumulativeROI = explicitInvested > 0 ? (explicitReturned / explicitInvested) * 100 : 0;
 
     return {
       ...inv,
-      investedFund: totalInvested,
-      returnedFund: totalPayouts,
-      equityPct: Number(equityPct.toFixed(2)),
+      investedFund: explicitInvested,
+      returnedFund: explicitReturned,
+      equityPct: explicitEquity,
       monthlyProfitShare: Math.round(monthlyProfitShare),
       cumulativeROI: Number(cumulativeROI.toFixed(1)),
       netProfitForMonth: netProfit
@@ -74,6 +72,14 @@ investmentsRouter.post("/transaction", authorize("manager"), (req, res) => {
   db.investorTransactions = db.investorTransactions || [];
   db.investorTransactions.unshift(transaction);
 
+  // Automatically adjust the investor's balance based on the transaction,
+  // but since it's an explicit field now, we just add to it.
+  if (type === 'Investment In') {
+    investor.investedFund = Number(investor.investedFund || 0) + Number(amount);
+  } else if (type === 'Profit Payout Out') {
+    investor.returnedFund = Number(investor.returnedFund || 0) + Number(amount);
+  }
+
   // Sync with main ledger (finance)
   const financeEntry = {
     id: nextId(db.finance),
@@ -107,6 +113,7 @@ investmentsRouter.post("/", authorize("technician"), (req, res) => {
     contactNumber: req.body.contactNumber || "",
     investedFund: Number(req.body.investedFund || 0),
     returnedFund: Number(req.body.returnedFund || 0),
+    equityPct: Number(req.body.equityPct || 0),
     investedDate: req.body.investedDate || new Date().toISOString().slice(0, 10),
     returnDate: req.body.returnDate || "",
     notes: req.body.notes || ""
@@ -130,6 +137,7 @@ investmentsRouter.put("/:id", authorize("technician"), (req, res) => {
     contactNumber: req.body.contactNumber ?? record.contactNumber,
     investedFund: req.body.investedFund !== undefined ? Number(req.body.investedFund) : record.investedFund,
     returnedFund: req.body.returnedFund !== undefined ? Number(req.body.returnedFund) : record.returnedFund,
+    equityPct: req.body.equityPct !== undefined ? Number(req.body.equityPct) : record.equityPct,
     investedDate: req.body.investedDate ?? record.investedDate,
     returnDate: req.body.returnDate ?? record.returnDate,
     notes: req.body.notes ?? record.notes

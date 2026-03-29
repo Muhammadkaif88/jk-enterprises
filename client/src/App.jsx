@@ -463,14 +463,15 @@ function InvestmentSection({
             <DataTable
               columns={[
                 { key: "investorName", label: "Investor" },
-                { key: "investedFund", label: "Invested", render: (row) => currency(row.investedFund) },
-                { key: "returnedFund", label: "Returned", render: (row) => currency(row.returnedFund) },
-                { key: "equityPct", label: "Equity", render: (row) => `${row.equityPct}%` },
-                { key: "monthlyProfitShare", label: "Monthly Profit", render: (row) => currency(row.monthlyProfitShare) },
-                { key: "cumulativeROI", label: "ROI", render: (row) => `${row.cumulativeROI}%` },
+                { key: "investedFund", label: "Invested", type: "number", render: (row) => currency(row.investedFund) },
+                { key: "returnedFund", label: "Returned", type: "number", render: (row) => currency(row.returnedFund) },
+                { key: "equityPct", label: "Equity (%)", type: "number", render: (row) => `${row.equityPct}%` },
+                { key: "monthlyProfitShare", label: "Monthly Profit", editable: false, render: (row) => currency(row.monthlyProfitShare) },
+                { key: "cumulativeROI", label: "ROI", editable: false, render: (row) => `${row.cumulativeROI}%` },
                 {
                   key: "actions",
                   label: "Actions",
+                  editable: false,
                   render: (row) => (
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button className="save-row-btn" onClick={() => openTransactionModal(row, "Investment In")}>Add Capital</button>
@@ -480,7 +481,8 @@ function InvestmentSection({
                 }
               ]}
               rows={investments}
-              canEdit={false}
+              canEdit={isAdmin}
+              onEdit={(data) => handleAction("PUT", `/investments/${data.id}`, data)}
             />
 
             <SectionCard title="Register New Investor" kicker="Onboarding">
