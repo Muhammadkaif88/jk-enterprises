@@ -83,6 +83,7 @@ investmentsRouter.post("/transaction", authorize("manager"), (req, res) => {
     amount: Number(amount),
     description: `Investor ${type}: ${investor.investorName} (${method}${method === 'UPI' ? ': ' + upiId : ''})`,
     category: 'Investment',
+    entryDate: date || new Date().toISOString().slice(0, 10),
     createdAt: new Date().toISOString()
   };
   db.finance.push(financeEntry);

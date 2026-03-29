@@ -25,7 +25,8 @@ companiesRouter.put("/:id", authorize("manager"), (req, res) => {
     bankName: req.body.bankName ?? company.bankName,
     accountNumber: req.body.accountNumber ?? company.accountNumber,
     ifsc: req.body.ifsc ?? company.ifsc,
-    upiId: req.body.upiId ?? company.upiId
+    upiId: req.body.upiId ?? company.upiId,
+    totalValuation: req.body.totalValuation !== undefined ? Number(req.body.totalValuation) : company.totalValuation
   });
 
   db.staff = db.staff.map((entry) =>

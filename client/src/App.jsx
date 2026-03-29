@@ -296,7 +296,7 @@ function DataTable({ columns, rows, onEdit, onDelete, canEdit, canDelete = false
                 ))}
                 {canEdit || canDelete ? (
                   <td className="td-actions">
-                    {editingId === row.id && canEdit && column?.editable !== false ? (
+                    {editingId === row.id && canEdit ? (
                       <>
                         <button className="save-row-btn" onClick={handleSave}>Save</button>
                         <button className="cancel-row-btn" onClick={cancelEdit}>Cancel</button>
@@ -409,9 +409,13 @@ function InvestmentSection({
 }) {
   const [view, setView] = useState("portfolio"); // portfolio, distribution, history
   const [activeTxInvestor, setActiveTxInvestor] = useState(null);
+  const [txType, setTxType] = useState("Investment In");
+  const [txMethod, setTxMethod] = useState("Cash");
 
-  const openTransactionModal = (investor) => {
+  const openTransactionModal = (investor, defaultType = "Investment In") => {
     setActiveTxInvestor(investor);
+    setTxType(defaultType);
+    setTxMethod("Cash");
     setIsTransactionModalOpen(true);
   };
 
@@ -447,9 +451,9 @@ function InvestmentSection({
           <h2 className="section-title">Investor & Fund Management</h2>
         </div>
         <div className="tab-group">
-          <button className={view === "portfolio" ? "tab-btn active" : "tab-btn"} onClick={() => setView("portfolio")}>Portfolio</button>
-          <button className={view === "distribution" ? "tab-btn active" : "tab-btn"} onClick={() => setView("distribution")}>Profit Split</button>
-          <button className={view === "history" ? "tab-btn active" : "tab-btn"} onClick={() => setView("history")}>History</button>
+          <button className={view === "portfolio" ? "tab-btn active" : "tab-btn"} onClick={() => setView("portfolio")}>Investment Portfolio</button>
+          <button className={view === "distribution" ? "tab-btn active" : "tab-btn"} onClick={() => setView("distribution")}>Profit Distribution</button>
+          <button className={view === "history" ? "tab-btn active" : "tab-btn"} onClick={() => setView("history")}>Transaction History</button>
         </div>
       </header>
 
@@ -483,7 +487,7 @@ function InvestmentSection({
                   </div>
 
                   <div className="salary-card-actions">
-                    <button className="save-row-btn" onClick={() => openTransactionModal(inv)}>Record Transaction</button>
+                    <button className="save-row-btn" onClick={() => openTransactionModal(inv, "Investment In")}>Add Capital</button>
                     <button className="btn-icon" onClick={() => { setSelectedInvestorId(inv.id); setView("history"); }}>View History</button>
                   </div>
                 </article>
@@ -519,7 +523,7 @@ function InvestmentSection({
               {
                 key: "action",
                 label: "Action",
-                render: (row) => <button className="save-row-btn" onClick={() => openTransactionModal(row)}>Pay Dividend</button>
+                render: (row) => <button className="save-row-btn" onClick={() => openTransactionModal(row, "Profit Payout Out")}>Pay Dividend</button>
               }
             ]}
             rows={investments}
@@ -558,7 +562,7 @@ function InvestmentSection({
             <form onSubmit={handleRecordTransaction} className="form-grid">
               <div className="form-group wide">
                 <label>Fund Direction</label>
-                <select name="type" required defaultValue="Investment In">
+                <select name="type" required value={txType} onChange={(e) => setTxType(e.target.value)}>
                   <option value="Investment In">Investment In (Add Capital)</option>
                   <option value="Profit Payout Out">Profit Payout (Dividend)</option>
                 </select>
@@ -573,33 +577,31 @@ function InvestmentSection({
               </div>
               <div className="form-group">
                 <label>Payment Method</label>
-                <select name="method" id="method-select" required defaultValue="Cash" onChange={(e) => {
-                  const method = e.target.value;
-                  document.getElementById('upi-fields').style.display = method === 'UPI' ? 'contents' : 'none';
-                  document.getElementById('cash-fields').style.display = method === 'Cash' ? 'contents' : 'none';
-                }}>
+                <select name="method" required value={txMethod} onChange={(e) => setTxMethod(e.target.value)}>
                   <option value="Cash">Cash</option>
                   <option value="UPI">UPI</option>
                 </select>
               </div>
 
-              <div id="upi-fields" style={{ display: 'none' }}>
-                <div className="form-group">
-                  <label>UPI ID</label>
-                  <input name="upiId" placeholder="upi@handle" />
-                </div>
-                <div className="form-group">
-                  <label>Transaction ID</label>
-                  <input name="transactionId" placeholder="UTR Number" />
-                </div>
-              </div>
+              {txMethod === 'UPI' && (
+                <>
+                  <div className="form-group">
+                    <label>UPI ID</label>
+                    <input name="upiId" placeholder="upi@handle" required />
+                  </div>
+                  <div className="form-group">
+                    <label>Transaction ID</label>
+                    <input name="transactionId" placeholder="UTR Number" required />
+                  </div>
+                </>
+              )}
 
-              <div id="cash-fields" style={{ display: 'contents' }}>
+              {txMethod === 'Cash' && (
                 <div className="form-group wide">
                   <label>Receipt Number / Handover Note</label>
-                  <input name="receiptNumber" placeholder="Receipt #" />
+                  <input name="receiptNumber" placeholder="Receipt #" required />
                 </div>
-              </div>
+              )}
 
               <div className="modal-footer wide">
                 <button type="button" className="cancel-row-btn" onClick={closeTransactionModal}>Cancel</button>
@@ -1767,6 +1769,7 @@ export default function App() {
                     <input name="bankName" defaultValue={selectedCompanyInfo.bankName || ""} placeholder="Bank name" />
                     <input name="accountNumber" defaultValue={selectedCompanyInfo.accountNumber || ""} placeholder="Account number" />
                     <input name="ifsc" defaultValue={selectedCompanyInfo.ifsc || ""} placeholder="IFSC" />
+                    <input name="totalValuation" type="number" defaultValue={selectedCompanyInfo.totalValuation || 10000000} placeholder="Total Company Valuation" />
                     <input name="upiId" defaultValue={selectedCompanyInfo.upiId || ""} placeholder="UPI ID" className="wide" />
                     <textarea name="address" defaultValue={selectedCompanyInfo.address || ""} placeholder="Company address" className="wide tall" />
                     <button type="submit">Update Company Billing Details</button>
