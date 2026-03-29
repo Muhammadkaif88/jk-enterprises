@@ -460,39 +460,28 @@ function InvestmentSection({
       {view === "portfolio" && (
         <>
           <SectionCard title="Investment Portfolio" kicker="Capital & Equity Tracking">
-            <div className="investor-grid">
-              {investments.map(inv => (
-                <article key={inv.id} className="salary-card investor-card">
-                  <div className="salary-card-header">
-                    <div>
-                      <p className="kicker">Investor</p>
-                      <h3>{inv.investorName}</h3>
+            <DataTable
+              columns={[
+                { key: "investorName", label: "Investor" },
+                { key: "investedFund", label: "Invested", render: (row) => currency(row.investedFund) },
+                { key: "returnedFund", label: "Returned", render: (row) => currency(row.returnedFund) },
+                { key: "equityPct", label: "Equity", render: (row) => `${row.equityPct}%` },
+                { key: "monthlyProfitShare", label: "Monthly Profit", render: (row) => currency(row.monthlyProfitShare) },
+                { key: "cumulativeROI", label: "ROI", render: (row) => `${row.cumulativeROI}%` },
+                {
+                  key: "actions",
+                  label: "Actions",
+                  render: (row) => (
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button className="save-row-btn" onClick={() => openTransactionModal(row, "Investment In")}>Add Capital</button>
+                      <button className="btn-icon" onClick={() => { setSelectedInvestorId(row.id); setView("history"); }}>History</button>
                     </div>
-                    <span className="salary-status-badge pending">{inv.equityPct}% Equity</span>
-                  </div>
-                  
-                  <div className="salary-metrics">
-                    <div className="salary-metric-item">
-                      <span>Total Invested</span>
-                      <strong>{currency(inv.investedFund)}</strong>
-                    </div>
-                    <div className="salary-metric-item">
-                      <span>Total Returned</span>
-                      <strong>{currency(inv.returnedFund)}</strong>
-                    </div>
-                    <div className="salary-metric-item">
-                      <span>ROI</span>
-                      <strong>{inv.cumulativeROI}%</strong>
-                    </div>
-                  </div>
-
-                  <div className="salary-card-actions">
-                    <button className="save-row-btn" onClick={() => openTransactionModal(inv, "Investment In")}>Add Capital</button>
-                    <button className="btn-icon" onClick={() => { setSelectedInvestorId(inv.id); setView("history"); }}>View History</button>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  )
+                }
+              ]}
+              rows={investments}
+              canEdit={false}
+            />
 
             <SectionCard title="Register New Investor" kicker="Onboarding">
               <form className="form-grid" onSubmit={(e) => { e.preventDefault(); handleAction("POST", "/investments", Object.fromEntries(new FormData(e.target))); e.target.reset(); }}>
@@ -554,12 +543,12 @@ function InvestmentSection({
 
       {isTransactionModalOpen && activeTxInvestor && (
         <div className="modal-overlay">
-          <div className="salary-edit-modal">
+          <div className="panel payment-method-box">
             <div className="modal-head">
               <h3>Record Transaction: {activeTxInvestor.investorName}</h3>
               <button className="btn-icon" onClick={closeTransactionModal}>✕</button>
             </div>
-            <form onSubmit={handleRecordTransaction} className="form-grid">
+            <form onSubmit={handleRecordTransaction} className="form-grid" style={{ marginTop: '16px' }}>
               <div className="form-group wide">
                 <label>Fund Direction</label>
                 <select name="type" required value={txType} onChange={(e) => setTxType(e.target.value)}>
