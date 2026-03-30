@@ -20,6 +20,10 @@ function resolveApprovalProfile(profile) {
     return { role: "manager", staffCategory: "Manager" };
   }
 
+  if (selectedProfile === "Investor") {
+    return { role: "investor", staffCategory: "Investor" };
+  }
+
   if (selectedProfile === "Freelancer") {
     return { role: "technician", staffCategory: "Freelancer" };
   }

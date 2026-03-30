@@ -45,7 +45,7 @@ function bucketByPeriod(items, formatKey) {
   return Array.from(totals.values()).sort((a, b) => a.label.localeCompare(b.label));
 }
 
-overviewRouter.get("/", authorize("technician"), (req, res) => {
+overviewRouter.get("/", authorize("investor"), (req, res) => {
   const db = readDb();
   const companyId = getRequestedCompanyId(req);
   const finance = scopeRecords(db.finance, companyId);

@@ -5,13 +5,13 @@ import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services
 
 export const financeRouter = Router();
 
-financeRouter.get("/", authorize("technician"), (req, res) => {
+financeRouter.get("/", authorize("investor"), (req, res) => {
   const db = readDb();
   const active = db.finance.filter((entry) => !entry.isDeleted);
   res.json(scopeRecords(active, getRequestedCompanyId(req)));
 });
 
-financeRouter.get("/summary", authorize("technician"), (req, res) => {
+financeRouter.get("/summary", authorize("investor"), (req, res) => {
   const db = readDb();
   const allFinance = db.finance.filter((entry) => !entry.isDeleted);
   const scopedFinance = scopeRecords(allFinance, getRequestedCompanyId(req));
@@ -47,7 +47,7 @@ financeRouter.get("/summary", authorize("technician"), (req, res) => {
   });
 });
 
-financeRouter.post("/", authorize("technician"), (req, res) => {
+financeRouter.post("/", authorize("manager"), (req, res) => {
   const db = readDb();
   const company = resolveCompany(db, req.body.companyId);
   if (!company) {
@@ -78,7 +78,7 @@ financeRouter.post("/", authorize("technician"), (req, res) => {
   res.status(201).json(log);
 });
 
-financeRouter.put("/:id", authorize("technician"), (req, res) => {
+financeRouter.put("/:id", authorize("manager"), (req, res) => {
   const db = readDb();
   const log = db.finance.find((entry) => entry.id === Number(req.params.id));
   if (!log) {
@@ -95,7 +95,7 @@ financeRouter.put("/:id", authorize("technician"), (req, res) => {
   res.json(log);
 });
 
-financeRouter.delete("/:id", authorize("technician"), (req, res) => {
+financeRouter.delete("/:id", authorize("manager"), (req, res) => {
   const db = readDb();
   const id = Number(req.params.id);
   const entry = db.finance.find((entry) => entry.id === id);

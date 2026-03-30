@@ -19,6 +19,7 @@ const sections = [
 
 const staffRoleOptions = [
   { value: "account-staff", label: "Account Staff" },
+  { value: "investor", label: "Investor" },
   { value: "trainer", label: "Trainer" },
   { value: "internship", label: "Internship" },
   { value: "robotic-engineer", label: "Robotic Engineer" },
@@ -30,6 +31,7 @@ const staffRoleOptions = [
 const sectionAccessByRole = {
   admin: sections.map((section) => section.id),
   manager: ["inventory", "finance", "investments", "billing", "projects", "notes", "team", "staffTracking", "salary", "tasks"],
+  Investor: ["overview", "finance", "investments"],
   "Account Staff": ["inventory", "finance", "investments", "billing", "staffTracking", "salary", "tasks"],
   Accountant: ["inventory", "finance", "investments", "billing", "staffTracking", "salary", "tasks"],
   Trainer: ["inventory", "projects", "notes", "team", "staffTracking", "tasks"],
@@ -45,21 +47,24 @@ const companyProfiles = {
   "Qisa Cafe": "Cafe operations, food service, and hospitality sales."
 };
 
-const staffCategoryOptions = ["Account Staff", "Trainer", "Internship", "Robotic Engineer"];
+const staffCategoryOptions = ["Account Staff", "Investor", "Trainer", "Internship", "Robotic Engineer"];
 const approvalAccessOptions = [
   { value: "Trainer", label: "Trainer" },
   { value: "Internship", label: "Internship" },
   { value: "Accountant", label: "Accountant" },
+  { value: "Investor", label: "Investor" },
   { value: "Robotic Engineer", label: "Robotic Engineer" },
   { value: "Freelancer", label: "Freelancer" },
   { value: "manager", label: "Manager" }
 ];
 const teamRoleOptions = [
   { value: "technician", label: "Employee" },
+  { value: "investor", label: "Investor" },
   { value: "manager", label: "Manager" },
   { value: "admin", label: "Admin" }
 ];
 const employeeCategoryOptions = [
+  { value: "Investor", label: "Investor" },
   { value: "Accountant", label: "Accountant" },
   { value: "Trainer", label: "Trainer" },
   { value: "Internship", label: "Internship" },
@@ -402,8 +407,8 @@ function InvestmentSection({
   setIsTransactionModalOpen,
   currency,
   handleAction,
-  role,
-  isAdmin,
+  canManageInvestments,
+  isReadOnly,
   selectedCompany,
   companies,
   refreshAll
@@ -475,52 +480,58 @@ function InvestmentSection({
                   editable: false,
                   render: (row) => (
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <button className="save-row-btn" onClick={() => openTransactionModal(row, "Investment In")}>Add Capital</button>
+                      {canManageInvestments ? (
+                        <button className="save-row-btn" onClick={() => openTransactionModal(row, "Investment In")}>Add Capital</button>
+                      ) : null}
                       <button className="btn-icon" onClick={() => { setSelectedInvestorId(row.id); setView("history"); }}>History</button>
                     </div>
                   )
                 }
               ]}
               rows={investments}
-              canEdit={isAdmin}
-              canDelete={isAdmin}
+              canEdit={canManageInvestments}
+              canDelete={canManageInvestments}
               onEdit={(data) => handleAction("PUT", `/investments/${data.id}`, data)}
               onDelete={(id) => handleAction("DELETE", `/investments/${id}`)}
             />
 
-            <SectionCard title="Register New Investor" kicker="Onboarding">
-              <form className="form-grid" onSubmit={(e) => {
-                e.preventDefault();
-                const data = Object.fromEntries(new FormData(e.target));
-                if (selectedCompany !== "all") {
-                  data.companyId = Number(selectedCompany);
-                } else {
-                  data.companyId = Number(data.companyId);
-                }
-                if (!data.companyId || isNaN(data.companyId)) {
-                  alert("Please select a valid company before adding an investor.");
-                  return;
-                }
-                handleAction("POST", "/investments", data);
-                e.target.reset();
-              }}>
-                <input name="investorName" placeholder="Investor Name" required />
-                <input name="contactNumber" placeholder="Contact Number" />
-                {selectedCompany === "all" ? (
-                  <select name="companyId" required defaultValue="">
-                    <option value="" disabled>Select company</option>
-                    {(companies || []).map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                ) : null}
-                <input name="investedFund" type="number" step="0.01" placeholder="Initial Investment Amount" required defaultValue="0" />
-                <input name="equityPct" type="number" step="0.01" placeholder="Equity Share (%)" required defaultValue="0" />
-                <input name="investedDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
-                <input name="notes" placeholder="Onboarding Notes" className="wide" />
-                <button type="submit">Add Investor</button>
-              </form>
-            </SectionCard>
+            {canManageInvestments ? (
+              <SectionCard title="Register New Investor" kicker="Onboarding">
+                <form className="form-grid" onSubmit={(e) => {
+                  e.preventDefault();
+                  const data = Object.fromEntries(new FormData(e.target));
+                  if (selectedCompany !== "all") {
+                    data.companyId = Number(selectedCompany);
+                  } else {
+                    data.companyId = Number(data.companyId);
+                  }
+                  if (!data.companyId || isNaN(data.companyId)) {
+                    alert("Please select a valid company before adding an investor.");
+                    return;
+                  }
+                  handleAction("POST", "/investments", data);
+                  e.target.reset();
+                }}>
+                  <input name="investorName" placeholder="Investor Name" required />
+                  <input name="contactNumber" placeholder="Contact Number" />
+                  {selectedCompany === "all" ? (
+                    <select name="companyId" required defaultValue="">
+                      <option value="" disabled>Select company</option>
+                      {(companies || []).map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  ) : null}
+                  <input name="investedFund" type="number" step="0.01" placeholder="Initial Investment Amount" required defaultValue="0" />
+                  <input name="equityPct" type="number" step="0.01" placeholder="Equity Share (%)" required defaultValue="0" />
+                  <input name="investedDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+                  <input name="notes" placeholder="Onboarding Notes" className="wide" />
+                  <button type="submit">Add Investor</button>
+                </form>
+              </SectionCard>
+            ) : (
+              <p className="muted-copy">Investor access is view only. New investor entries and fund changes can only be handled by admin or manager accounts.</p>
+            )}
           </SectionCard>
         </>
       )}
@@ -541,7 +552,7 @@ function InvestmentSection({
               {
                 key: "action",
                 label: "Action",
-                render: (row) => <button className="save-row-btn" onClick={() => openTransactionModal(row, "Profit Payout Out")}>Pay Dividend</button>
+                render: (row) => canManageInvestments ? <button className="save-row-btn" onClick={() => openTransactionModal(row, "Profit Payout Out")}>Pay Dividend</button> : <span className="muted-copy">View only</span>
               }
             ]}
             rows={investments}
@@ -570,7 +581,7 @@ function InvestmentSection({
         </SectionCard>
       )}
 
-      {isTransactionModalOpen && activeTxInvestor && (
+      {canManageInvestments && isTransactionModalOpen && activeTxInvestor && !isReadOnly && (
         <div className="modal-overlay">
           <div className="panel payment-method-box">
             <div className="modal-head">
@@ -679,10 +690,16 @@ export default function App() {
   const role = user?.role || "guest";
   const staffCategory = user?.staffCategory || "";
   const isAdmin = role === "admin";
+  const isInvestor = role === "investor" || staffCategory === "Investor";
   const canManagePeople = ["admin", "manager"].includes(role);
   const requestRole = !isAdmin && staffCategory === "Account Staff" ? "manager" : role;
+  const accessProfileKey = isAdmin ? "admin" : role === "manager" ? "manager" : isInvestor ? "Investor" : staffCategory || "technician";
+  const canViewOverview = isAdmin || isInvestor;
+  const canViewFinance = ["admin", "manager", "investor"].includes(requestRole) || isInvestor;
+  const canEditFinance = ["admin", "manager"].includes(requestRole);
+  const canManageInvestments = ["admin", "manager"].includes(requestRole);
   const allowedSectionIds = new Set(
-    sectionAccessByRole[isAdmin ? "admin" : role === "manager" ? "manager" : staffCategory || "technician"] ||
+    sectionAccessByRole[accessProfileKey] ||
       sectionAccessByRole.technician
   );
   const availableCompanies = isAdmin
@@ -702,7 +719,7 @@ export default function App() {
     (section) =>
       allowedSectionIds.has(section.id) &&
       !hiddenSectionIds.has(section.id) &&
-      (isAdmin || section.id !== "overview") &&
+      (canViewOverview || section.id !== "overview") &&
       (selectedCompany !== "all" || !companyScopedSections.has(section.id))
   );
   const currentStaffMember = useMemo(
@@ -790,6 +807,52 @@ export default function App() {
     refreshInFlight.current = true;
 
     try {
+      if (isInvestor) {
+        const [companyRows, overviewData, financeRows, financeTotals, investmentRows] = await Promise.all([
+          api("/companies"),
+          api("/overview"),
+          api("/finance"),
+          api("/finance/summary"),
+          api("/investments")
+        ]);
+
+        setCompanies(companyRows);
+        setOverview(overviewData);
+        setFinance(financeRows);
+        setFinanceSummary(financeTotals);
+        setInvestments(investmentRows);
+        setBilling([]);
+        setInventory([]);
+        setProjects([]);
+        setNotes([]);
+        setTeam([]);
+        setTasks([]);
+        setPendingUsers([]);
+        setSalaries([]);
+        setStaffTracking({
+          attendance: [],
+          doubts: [],
+          complaints: [],
+          summary: null
+        });
+
+        if (activeSection === "investments") {
+          if (selectedInvestorId) {
+            setInvestorTransactions(await api(`/investments/${selectedInvestorId}/transactions`));
+          } else {
+            const allTransactions = await Promise.all(
+              investmentRows.map((entry) => api(`/investments/${entry.id}/transactions`))
+            );
+            setInvestorTransactions(allTransactions.flat());
+          }
+        } else {
+          setInvestorTransactions([]);
+        }
+
+        setMessage("");
+        return;
+      }
+
       const baseRequests = await Promise.all([
         api("/companies"),
         api("/overview"),
@@ -818,12 +881,12 @@ export default function App() {
       });
       setTasks(baseRequests[10]);
 
-      if (["admin", "manager"].includes(requestRole)) {
+      if (canViewFinance) {
         const [financeRows, financeTotals, investmentRows, billingRows] = await Promise.all([
           api("/finance"),
           api("/finance/summary"),
           api("/investments"),
-          api("/billing")
+          canEditFinance ? api("/billing") : Promise.resolve([])
         ]);
         setFinance(financeRows);
         setFinanceSummary(financeTotals);
@@ -947,7 +1010,7 @@ export default function App() {
     );
   }, [projectRows, projectSearch]);
 
-  const restrictedFinance = !["admin", "manager"].includes(requestRole);
+  const restrictedFinance = !canViewFinance;
   const canManageTasks = role === "admin" || role === "manager";
   const filteredInventory = useMemo(() => {
     const query = inventorySearch.trim().toLowerCase();
@@ -1691,26 +1754,30 @@ export default function App() {
               ) : null}
 
               <SectionCard title="Expense and Cash Tracking" kicker="Daily and monthly accounting">
-                <form
-                  className="form-grid"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const data = Object.fromEntries(new FormData(event.target));
-                    handleAction("POST", "/finance", withSelectedCompany(data));
-                    event.target.reset();
-                  }}
-                >
-                  <select name="transactionType" required defaultValue="expense">
-                    <option value="expense">Expense</option>
-                    <option value="income">Income</option>
-                    <option value="purchase">Purchase</option>
-                  </select>
-                  <input name="category" placeholder="Category" required />
-                  <input name="entryDate" type="date" required />
-                  <input name="amount" type="number" placeholder="Amount" required />
-                  <input name="description" placeholder="Description" className="wide" required />
-                  <button type="submit">Log Entry</button>
-                </form>
+                {canEditFinance ? (
+                  <form
+                    className="form-grid"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const data = Object.fromEntries(new FormData(event.target));
+                      handleAction("POST", "/finance", withSelectedCompany(data));
+                      event.target.reset();
+                    }}
+                  >
+                    <select name="transactionType" required defaultValue="expense">
+                      <option value="expense">Expense</option>
+                      <option value="income">Income</option>
+                      <option value="purchase">Purchase</option>
+                    </select>
+                    <input name="category" placeholder="Category" required />
+                    <input name="entryDate" type="date" required />
+                    <input name="amount" type="number" placeholder="Amount" required />
+                    <input name="description" placeholder="Description" className="wide" required />
+                    <button type="submit">Log Entry</button>
+                  </form>
+                ) : (
+                  <p className="muted-copy">Investor access is view only. Accounting entries can be created, edited, and deleted only by admin or manager accounts.</p>
+                )}
 
                 <div className="finance-toolbar">
                   <input
@@ -1730,8 +1797,8 @@ export default function App() {
                     { key: "amount", label: "Amount", type: "number", render: (row) => currency(row.amount) }
                   ]}
                   rows={filteredFinance}
-                  canEdit={role !== "technician"}
-                  canDelete={isAdmin}
+                  canEdit={canEditFinance}
+                  canDelete={isAdmin && canEditFinance}
                   onEdit={(data) => handleAction("PUT", `/finance/${data.id}`, data)}
                   onDelete={(id) => handleAction("DELETE", `/finance/${id}`)}
                 />
@@ -1750,8 +1817,8 @@ export default function App() {
             setIsTransactionModalOpen={setIsTransactionModalOpen}
             currency={currency}
             handleAction={handleAction}
-            role={role}
-            isAdmin={isAdmin}
+            canManageInvestments={canManageInvestments}
+            isReadOnly={!canManageInvestments}
             selectedCompany={selectedCompany}
             companies={companies}
             refreshAll={refreshAll}

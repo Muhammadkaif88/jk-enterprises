@@ -4,7 +4,7 @@ import { readDb, writeDb } from "../data/store.js";
 
 export const companiesRouter = Router();
 
-companiesRouter.get("/", authorize("technician"), (_req, res) => {
+companiesRouter.get("/", authorize("investor"), (_req, res) => {
   const db = readDb();
   res.json(db.companies);
 });

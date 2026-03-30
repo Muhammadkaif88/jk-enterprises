@@ -5,7 +5,7 @@ import { getRequestedCompanyId, resolveCompany, scopeRecords } from "../services
 
 export const investmentsRouter = Router();
 
-investmentsRouter.get("/", authorize("technician"), (req, res) => {
+investmentsRouter.get("/", authorize("investor"), (req, res) => {
   const db = readDb();
   const companyId = getRequestedCompanyId(req);
   
@@ -98,7 +98,7 @@ investmentsRouter.post("/transaction", authorize("manager"), (req, res) => {
   res.status(201).json({ transaction, financeEntry });
 });
 
-investmentsRouter.post("/", authorize("technician"), (req, res) => {
+investmentsRouter.post("/", authorize("manager"), (req, res) => {
   const db = readDb();
   const company = resolveCompany(db, req.body.companyId);
   if (!company) {
@@ -142,7 +142,7 @@ investmentsRouter.post("/", authorize("technician"), (req, res) => {
   res.status(201).json(record);
 });
 
-investmentsRouter.put("/:id", authorize("technician"), (req, res) => {
+investmentsRouter.put("/:id", authorize("manager"), (req, res) => {
   const db = readDb();
   const record = (db.investments || []).find((entry) => entry.id === Number(req.params.id));
   if (!record) {
@@ -164,13 +164,13 @@ investmentsRouter.put("/:id", authorize("technician"), (req, res) => {
   res.json(record);
 });
 
-investmentsRouter.get("/:id/transactions", authorize("technician"), (req, res) => {
+investmentsRouter.get("/:id/transactions", authorize("investor"), (req, res) => {
   const db = readDb();
   const transactions = (db.investorTransactions || []).filter(t => t.investorId === Number(req.params.id));
   res.json(transactions);
 });
 
-investmentsRouter.delete("/:id", authorize("technician"), (req, res) => {
+investmentsRouter.delete("/:id", authorize("manager"), (req, res) => {
   const db = readDb();
   const record = (db.investments || []).find((entry) => entry.id === Number(req.params.id));
   if (!record) {

@@ -1,6 +1,7 @@
 import { readDb } from "../data/store.js";
 
 const roleLevels = {
+  investor: 0.5,
   internship: 1,
   trainer: 1,
   "robotic-engineer": 1,
