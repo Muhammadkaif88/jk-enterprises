@@ -14,45 +14,18 @@ const legacyDbPaths = [
 
 const seedData = {
   companies: [
-      
-     {
+    {
       id: 1,
-     name: "Edukkit",
-      code: "edukkit",
-      address: "Raihsoft Technologies, 1st Floor Pandikkad, Malappuram, Kerala 676521, India",
-      phone: "+91 90370 65029",
-      email: "edukkitofficial@gmail.com",
-      bankName: "Kotak811 Bank",
-      accountNumber: "7049752112",
-      ifsc: "KKBK0009308",
-      upiId: "8075100930@kotak811",
-      totalValuation: 10000000
-    },
-    {
-      id: 2,
-      name: "3D.Objex",
-      code: "3d-objex",
-      address: "Prototype Service Studio, Malappuram, Kerala",
-      phone: "+91 80751 00930",
-      email: "sales@3dobjex.local",
-      bankName: "Kotak811 Bank",
-      accountNumber: "7049752112",
-      ifsc: "KKBK0009308",
-      upiId: "8075100930@kotak811",
-      totalValuation: 5000000
-    },
-    {
-      id: 3,
-      name: "Qisa Cafe",
-      code: "qisa-cafe",
-      address: "Qisa Cafe, Malappuram, Kerala",
-      phone: "+91 80751 00930",
-      email: "hello@qisacafe.local",
-      bankName: "Kotak811 Bank",
-      accountNumber: "7049752112",
-      ifsc: "KKBK0009308",
-      upiId: "8075100930@kotak811",
-      totalValuation: 2000000
+      name: "JK Enterprises",
+      code: "jk-enterprises",
+      address: "Enter Company Address Here",
+      phone: "+91 00000 00000",
+      email: "contact@jkenterprises.local",
+      bankName: "",
+      accountNumber: "",
+      ifsc: "",
+      upiId: "",
+      totalValuation: 0
     }
   ],
   staff: [
@@ -61,314 +34,37 @@ const seedData = {
       fullName: "Muhammed Kaif",
       email: "owner@jkcompy.local",
       role: "admin",
-      staffCategory: "Robotic Engineer",
+      staffCategory: "Owner",
       companyId: 1,
-      companyName: "Edukkit",
-      expertise: "Operations, finance, embedded systems",
+      companyName: "JK Enterprises",
+      expertise: "Management",
       attendanceStatus: "Present",
       assignedTask: "Executive oversight",
       salary: 0
-    },
-    {
-      id: 2,
-      fullName: "Lead Robotics Engineer",
-      email: "lead@jkcompy.local",
-      role: "manager",
-      staffCategory: "Robotic Engineer",
-      companyId: 2,
-      companyName: "3D.Objex",
-      expertise: "PID control, mechatronics, prototyping",
-      attendanceStatus: "Present",
-      assignedTask: "Agri-bot validation",
-      salary: 65000
-    },
-    {
-      id: 3,
-      fullName: "Lab Technician",
-      email: "tech@jkcompy.local",
-      role: "technician",
-      staffCategory: "Trainer",
-      companyId: 1,
-      companyName: "Edukkit",
-      expertise: "Soldering, inventory handling, Arduino labs",
-      attendanceStatus: "Present",
-      assignedTask: "Drawer audit",
-      salary: 28000
     }
   ],
-  inventory: [
-    {
-      id: 1,
-      companyId: 2,
-      companyName: "3D.Objex",
-      partName: "Nema 17 Stepper Motor",
-      category: "Motor",
-      partValue: "1.8 Degree",
-      packageType: "Module",
-      stockQty: 14,
-      lowStockThreshold: 6,
-      unitCost: 780,
-      datasheetUrl: "https://example.com/nema17.pdf",
-      supplier: "Robotics Hub"
-    },
-    {
-      id: 2,
-      companyId: 1,
-      companyName: "Edukkit",
-      partName: "HC-SR04 Ultrasonic Sensor",
-      category: "Sensor",
-      partValue: "40kHz",
-      packageType: "Module",
-      stockQty: 9,
-      lowStockThreshold: 10,
-      unitCost: 85,
-      datasheetUrl: "https://example.com/hcsr04.pdf",
-      supplier: "Sensor World"
-    },
-    {
-      id: 3,
-      companyId: 1,
-      companyName: "Edukkit",
-      partName: "ATmega328P",
-      category: "MCU",
-      partValue: "8-bit AVR",
-      packageType: "DIP",
-      stockQty: 21,
-      lowStockThreshold: 8,
-      unitCost: 190,
-      datasheetUrl: "https://example.com/atmega328p.pdf",
-      supplier: "Embedded Mart"
-    }
-  ],
-  finance: [
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "Edukkit",
-      transactionType: "income",
-      amount: 45000,
-      description: "Client payment for line follower robot batch",
-      createdAt: "2026-03-18T10:00:00.000Z"
-    },
-    {
-      id: 2,
-      companyId: 1,
-      companyName: "Edukkit",
-      transactionType: "purchase",
-      amount: 12500,
-      description: "Bulk purchase of lab consumables",
-      createdAt: "2026-03-19T09:00:00.000Z"
-    },
-    {
-      id: 3,
-      companyId: 3,
-      companyName: "Qisa Cafe",
-      transactionType: "expense",
-      amount: 8000,
-      description: "Electricity and rent allocation",
-      createdAt: "2026-03-20T09:00:00.000Z"
-    }
-  ],
-  projects: [
-    {
-      id: 1,
-      companyId: 2,
-      companyName: "3D.Objex",
-      projectName: "Smart Agri-Bot v2",
-      clientName: "Internal R&D",
-      status: "testing",
-      documentationLink: "https://example.com/agri-bot-docs",
-      firmwareLink: "https://github.com/example/agri-bot",
-      circuitDiagramLink: "https://example.com/agri-bot-circuit",
-      codeLink: "https://github.com/example/agri-bot-firmware",
-      componentNotes: "Uses dual stepper drive, ultrasonic sensing, moisture relay, and AVR controller board.",
-      projectDetails: "Autonomous agriculture prototype with obstacle avoidance and moisture-triggered actions.",
-      notes: "Field moisture navigation tuning in progress",
-      imageAttachments: [],
-      bom: [
-        { inventoryId: 1, quantity: 2 },
-        { inventoryId: 2, quantity: 2 }
-      ],
-      ideaSourceId: null,
-      createdAt: "2026-03-17T11:00:00.000Z"
-    }
-  ],
-  notes: [
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "Edukkit",
-      title: "PID Control improvement",
-      content: "Use filtered derivative term for motor stabilization on rough terrain.",
-      tags: ["PID_Control", "AgriBot"],
-      isConverted: false,
-      createdAt: "2026-03-21T08:00:00.000Z"
-    }
-  ],
-  attendanceLogs: [
-    {
-      id: 1,
-      companyId: 2,
-      companyName: "3D.Objex",
-      staffId: 2,
-      staffName: "Lead Robotics Engineer",
-      date: "2026-03-23",
-      status: "Present",
-      checkIn: "09:05",
-      checkOut: "18:20",
-      notes: "Reviewed agri-bot motor tuning"
-    },
-    {
-      id: 2,
-      companyId: 1,
-      companyName: "Edukkit",
-      staffId: 3,
-      staffName: "Lab Technician",
-      date: "2026-03-23",
-      status: "Late",
-      checkIn: "10:10",
-      checkOut: "18:05",
-      notes: "Component drawer recount"
-    }
-  ],
-  doubtClearance: [
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "Edukkit",
-      staffId: 3,
-      staffName: "Lab Technician",
-      topic: "Motor driver overheating",
-      question: "Need review on current limiting for BTS7960 setup.",
-      response: "Add heatsink and reduce peak duty cycle during stall tests.",
-      priority: "High",
-      status: "Resolved",
-      createdAt: "2026-03-22T11:30:00.000Z",
-      resolvedAt: "2026-03-22T13:15:00.000Z"
-    }
-  ],
-  complaints: [
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "Edukkit",
-      staffId: 3,
-      staffName: "Lab Technician",
-      complaintType: "Lab support",
-      subject: "Insufficient soldering stations",
-      description: "Two soldering benches are frequently unavailable during workshop hours.",
-      status: "Open",
-      resolution: "",
-      createdAt: "2026-03-21T09:45:00.000Z"
-    }
-  ],
-  tasks: [
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "Edukkit",
-      title: "Prepare robotics workshop kit",
-      description: "Assemble starter kits and testing checklist for next batch.",
-      assigneeId: 3,
-      assigneeName: "Lab Technician",
-      priority: "High",
-      status: "todo",
-      dueDate: "2026-03-25",
-      createdAt: "2026-03-23T08:30:00.000Z"
-    },
-    {
-      id: 2,
-      companyId: 3,
-      companyName: "Qisa Cafe",
-      title: "Review weekly cafe expense sheet",
-      description: "Validate purchase entries and cash counter mismatch.",
-      assigneeId: 1,
-      assigneeName: "Muhammed Kaif",
-      priority: "Medium",
-      status: "in-progress",
-      dueDate: "2026-03-24",
-      createdAt: "2026-03-23T09:15:00.000Z"
-    }
-  ],
-  billing: [
-    {
-      id: 1,
-      companyId: 1,
-      companyName: "Edukkit",
-      billType: "Service Charge",
-      invoiceNumber: "20260011",
-      customerName: "Thanseeh M",
-      customerAddress: "Eranad Knowledge City College, Elankur Wandoor Rd, Manjeri, Kerala 676122",
-      customerPhone: "+91 90370 65029",
-      description: "LIFI Data Transfer System service charge",
-      lineItems: [
-        { description: "LIFI Data Transfer System Service Charge", qty: 1, price: 2500, total: 2500 },
-        { description: "16x2 LCD JHD Display", qty: 1, price: 190, total: 190 },
-        { description: "LCD I2C Adapter Module", qty: 1, price: 65, total: 65 },
-        { description: "Mini Breadboard", qty: 1, price: 35, total: 35 },
-        { description: "LDR Sensor Module", qty: 1, price: 45, total: 45 },
-        { description: "Nano With C Type USB ATmega328P", qty: 1, price: 270, total: 270 }
-      ],
-      subtotal: 3105,
-      discount: 105,
-      paidAmount: 0,
-      balanceDue: 3000,
-      paymentMethod: "Bank / UPI",
-      amount: 3000,
-      status: "Paid",
-      invoiceDate: "2026-03-20",
-      dueDate: "2026-03-25"
-    },
-    {
-      id: 2,
-      companyId: 2,
-      companyName: "3D.Objex",
-      billType: "Printing Service",
-      invoiceNumber: "20260012",
-      customerName: "Prototype Client",
-      customerAddress: "",
-      customerPhone: "",
-      description: "Custom enclosure print job",
-      lineItems: [
-        { description: "Custom enclosure 3D print", qty: 1, price: 6500, total: 6500 }
-      ],
-      subtotal: 6500,
-      discount: 0,
-      paidAmount: 0,
-      balanceDue: 6500,
-      paymentMethod: "Bank Transfer",
-      amount: 6500,
-      status: "Sent",
-      invoiceDate: "2026-03-22",
-      dueDate: "2026-03-27"
-    }
-  ],
-  investments: [
-    {
-      id: 1,
-      companyId: 3,
-      companyName: "Qisa Cafe",
-      investorName: "Cafe Growth Partner",
-      contactNumber: "+91 90000 11111",
-      investedFund: 250000,
-      returnedFund: 40000,
-      investedDate: "2026-02-10",
-      returnDate: "2026-03-20",
-      notes: "Initial seating and kitchen setup investment."
-    }
-  ],
+  inventory: [],
+  finance: [],
+  projects: [],
+  notes: [],
+  attendanceLogs: [],
+  doubtClearance: [],
+  complaints: [],
+  tasks: [],
+  billing: [],
+  investments: [],
   salaries: [],
   users: [
     {
       id: 1,
       email: "owner@jkcompy.local",
-      password: "admin", // Plain text for now as per minimal requirements, can be hashed later
+      password: "admin",
       role: "admin",
       fullName: "Muhammed Kaif",
       companyId: 1,
-      companyName: "Edukkit",
+      companyName: "JK Enterprises",
       approvalStatus: "approved",
-      approvedAt: "2026-03-20T08:00:00.000Z",
+      approvedAt: new Date().toISOString(),
       approvedBy: "System"
     }
   ],

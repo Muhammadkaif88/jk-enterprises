@@ -56,7 +56,7 @@ teamRouter.post("/", authorize("admin"), (req, res) => {
     expertise: req.body.expertise || "",
     attendanceStatus: "Pending Assignment",
     assignedTask: req.body.assignedTask || "",
-    salary: Number(req.body.salary || 0)
+    dailyWage: Number(req.body.dailyWage || req.body.salary || 0)
   };
   db.staff.unshift(member);
   db.users.unshift({
@@ -82,7 +82,7 @@ teamRouter.put("/:id", authorize("manager"), (req, res) => {
     staffCategory: req.body.staffCategory ?? member.staffCategory,
     expertise: req.body.expertise ?? member.expertise,
     assignedTask: req.body.assignedTask ?? member.assignedTask,
-    salary: req.body.salary !== undefined ? Number(req.body.salary) : member.salary
+    dailyWage: req.body.dailyWage !== undefined ? Number(req.body.dailyWage) : (req.body.salary !== undefined ? Number(req.body.salary) : member.dailyWage)
   });
 
   const linkedUser = db.users.find(

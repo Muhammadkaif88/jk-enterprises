@@ -482,7 +482,9 @@ function InvestmentSection({
               ]}
               rows={investments}
               canEdit={isAdmin}
+              canDelete={isAdmin}
               onEdit={(data) => handleAction("PUT", `/investments/${data.id}`, data)}
+              onDelete={(id) => handleAction("DELETE", `/investments/${id}`)}
             />
 
             <SectionCard title="Register New Investor" kicker="Onboarding">
@@ -2529,12 +2531,19 @@ export default function App() {
                   ...(isAdmin ? [{ key: "phone", label: "Phone" }] : []),
                   ...(isAdmin ? [{ key: "role", label: "Role", options: teamRoleOptions }] : []),
                   { key: "staffCategory", label: "Category", options: employeeCategoryOptions },
-                  { key: "dailyWage", label: "Daily Wage", type: "number", render: (row) => currency(row.dailyWage) },
+                  { key: "dailyWage", label: "Daily Wage", type: "number", render: (row) => currency(row.dailyWage), editable: isAdmin },
                   { key: "attendanceStatus", label: "Current Status", editable: false }
                 ]}
                 rows={team}
-                canEdit={role === "admin"} canDelete={isAdmin}
-                onEdit={(data) => handleAction("PUT", `/team/${data.id}`, data)}
+                canEdit={role === "admin" || role === "manager"} canDelete={isAdmin}
+                onEdit={async (data) => {
+                  const result = await handleAction("PUT", `/team/${data.id}`, data);
+                  if (result && user?.email === data.email && user?.fullName !== data.fullName) {
+                    const updatedUser = { ...user, fullName: data.fullName };
+                    setUser(updatedUser);
+                    localStorage.setItem("user", JSON.stringify(updatedUser));
+                  }
+                }}
                 onDelete={(id) => handleAction("DELETE", `/team/${id}`)}
               />
             </SectionCard>
