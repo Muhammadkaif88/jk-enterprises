@@ -121,6 +121,23 @@ investmentsRouter.post("/", authorize("technician"), (req, res) => {
 
   db.investments = db.investments || [];
   db.investments.unshift(record);
+
+  // Sync with main ledger (finance) if initial investment is provided
+  if (record.investedFund > 0) {
+    const financeEntry = {
+      id: nextId(db.finance),
+      companyId: record.companyId,
+      companyName: record.companyName,
+      transactionType: 'income',
+      amount: record.investedFund,
+      description: `Initial Investment: ${record.investorName}`,
+      category: 'Investment',
+      entryDate: record.investedDate,
+      createdAt: new Date().toISOString()
+    };
+    db.finance.push(financeEntry);
+  }
+
   writeDb(db);
   res.status(201).json(record);
 });

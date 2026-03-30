@@ -405,6 +405,7 @@ function InvestmentSection({
   role,
   isAdmin,
   selectedCompany,
+  companies,
   refreshAll
 }) {
   const [view, setView] = useState("portfolio"); // portfolio, distribution, history
@@ -488,9 +489,33 @@ function InvestmentSection({
             />
 
             <SectionCard title="Register New Investor" kicker="Onboarding">
-              <form className="form-grid" onSubmit={(e) => { e.preventDefault(); handleAction("POST", "/investments", Object.fromEntries(new FormData(e.target))); e.target.reset(); }}>
+              <form className="form-grid" onSubmit={(e) => {
+                e.preventDefault();
+                const data = Object.fromEntries(new FormData(e.target));
+                if (selectedCompany !== "all") {
+                  data.companyId = Number(selectedCompany);
+                } else {
+                  data.companyId = Number(data.companyId);
+                }
+                if (!data.companyId || isNaN(data.companyId)) {
+                  alert("Please select a valid company before adding an investor.");
+                  return;
+                }
+                handleAction("POST", "/investments", data);
+                e.target.reset();
+              }}>
                 <input name="investorName" placeholder="Investor Name" required />
                 <input name="contactNumber" placeholder="Contact Number" />
+                {selectedCompany === "all" ? (
+                  <select name="companyId" required defaultValue="">
+                    <option value="" disabled>Select company</option>
+                    {(companies || []).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                ) : null}
+                <input name="investedFund" type="number" step="0.01" placeholder="Initial Investment Amount" required defaultValue="0" />
+                <input name="equityPct" type="number" step="0.01" placeholder="Equity Share (%)" required defaultValue="0" />
                 <input name="investedDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
                 <input name="notes" placeholder="Onboarding Notes" className="wide" />
                 <button type="submit">Add Investor</button>
@@ -1728,6 +1753,7 @@ export default function App() {
             role={role}
             isAdmin={isAdmin}
             selectedCompany={selectedCompany}
+            companies={companies}
             refreshAll={refreshAll}
           />
         ) : null}
