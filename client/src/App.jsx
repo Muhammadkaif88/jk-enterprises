@@ -1135,9 +1135,16 @@ export default function App() {
         kicker: "Issue desk",
         value: staffTracking.summary?.openComplaints || 0,
         description: "Open staff complaint tracking page."
-      }
+      },
+      ...(!canManagePeople ? [{
+        key: "my-stats",
+        label: "My Stats Summary",
+        kicker: "Performance",
+        value: "View",
+        description: "Quick summary of recent activity, attendance, and queries."
+      }] : [])
     ],
-    [staffTracking.summary]
+    [staffTracking.summary, canManagePeople]
   );
 
   useEffect(() => {
@@ -2304,15 +2311,15 @@ export default function App() {
 
         {activeSection === "salary" ? (
           <div className="section-stack">
-            <SectionCard title="Salary Management" kicker="Automated payroll">
-              <div className="salary-controls">
-                <select value={salaryMonth} onChange={(e) => setSalaryMonth(Number(e.target.value))}>
-                  {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-                <select value={salaryYear} onChange={(e) => setSalaryYear(Number(e.target.value))}>
-                  {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-                {canManagePeople && (
+            {canManagePeople ? (
+              <SectionCard title="Salary Management" kicker="Automated payroll">
+                <div className="salary-controls">
+                  <select value={salaryMonth} onChange={(e) => setSalaryMonth(Number(e.target.value))}>
+                    {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                  <select value={salaryYear} onChange={(e) => setSalaryYear(Number(e.target.value))}>
+                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
                   <button 
                     type="button" 
                     className="save-row-btn"
@@ -2320,65 +2327,63 @@ export default function App() {
                   >
                     Sync / Calculate Salaries
                   </button>
-                )}
-              </div>
+                </div>
 
-              <div className="salary-card-grid" style={{ marginTop: "24px" }}>
-                {salaries.length ? (
-                  salaries.map(salary => (
-                    <article key={salary.id} className="project-card">
-                      <div className="project-card-head">
-                        <div>
-                          <p className="kicker">{salary.companyName}</p>
-                          <h3>{salary.staffName}</h3>
-                        </div>
-                        <span className={`task-badge status-${salary.status}`}>
-                          {salary.status.toUpperCase()}
-                        </span>
-                      </div>
-                      
-                      <div className="salary-metrics">
-                        <div className="salary-metric">
-                          <span>Days Worked</span>
-                          <strong>{salary.workUnits}</strong>
-                        </div>
-                        <div className="salary-metric">
-                          <span>Per Day</span>
-                          <strong>{currency(salary.dailyWage)}</strong>
-                        </div>
-                        <div className="salary-metric accent">
-                          <span>Base Total</span>
-                          <strong>{currency(salary.baseAmount)}</strong>
-                        </div>
-                      </div>
-
-                      {canManagePeople && salary.status !== 'paid' && (
-                        <div className="salary-edit-fields">
-                          <div className="input-group">
-                            <label>Bonus</label>
-                            <input 
-                              type="number" 
-                              defaultValue={salary.bonus} 
-                              onBlur={(e) => handleAction("PATCH", `/salaries/${salary.id}`, { bonus: Number(e.target.value) })}
-                            />
+                <div className="salary-card-grid" style={{ marginTop: "24px" }}>
+                  {salaries.length ? (
+                    salaries.map(salary => (
+                      <article key={salary.id} className="project-card">
+                        <div className="project-card-head">
+                          <div>
+                            <p className="kicker">{salary.companyName}</p>
+                            <h3>{salary.staffName}</h3>
                           </div>
-                          <div className="input-group">
-                            <label>Deduction</label>
-                            <input 
-                              type="number" 
-                              defaultValue={salary.deduction} 
-                              onBlur={(e) => handleAction("PATCH", `/salaries/${salary.id}`, { deduction: Number(e.target.value) })}
-                            />
+                          <span className={`task-badge status-${salary.status}`}>
+                            {salary.status.toUpperCase()}
+                          </span>
+                        </div>
+                        
+                        <div className="salary-metrics">
+                          <div className="salary-metric">
+                            <span>Days Worked</span>
+                            <strong>{salary.workUnits}</strong>
+                          </div>
+                          <div className="salary-metric">
+                            <span>Per Day</span>
+                            <strong>{currency(salary.dailyWage)}</strong>
+                          </div>
+                          <div className="salary-metric accent">
+                            <span>Base Total</span>
+                            <strong>{currency(salary.baseAmount)}</strong>
                           </div>
                         </div>
-                      )}
 
-                      <div className="salary-total-row">
-                        <span>Net Payable</span>
-                        <strong>{currency(salary.finalAmount)}</strong>
-                      </div>
+                        {salary.status !== 'paid' && (
+                          <div className="salary-edit-fields">
+                            <div className="input-group">
+                              <label>Bonus</label>
+                              <input 
+                                type="number" 
+                                defaultValue={salary.bonus} 
+                                onBlur={(e) => handleAction("PATCH", `/salaries/${salary.id}`, { bonus: Number(e.target.value) })}
+                              />
+                            </div>
+                            <div className="input-group">
+                              <label>Deduction</label>
+                              <input 
+                                type="number" 
+                                defaultValue={salary.deduction} 
+                                onBlur={(e) => handleAction("PATCH", `/salaries/${salary.id}`, { deduction: Number(e.target.value) })}
+                              />
+                            </div>
+                          </div>
+                        )}
 
-                      {canManagePeople && (
+                        <div className="salary-total-row">
+                          <span>Net Payable</span>
+                          <strong>{currency(salary.finalAmount)}</strong>
+                        </div>
+
                         <div className="salary-actions">
                           {salary.status === 'pending' && (
                             <button className="save-row-btn" onClick={() => handleAction("POST", `/salaries/${salary.id}/approve`)}>
@@ -2391,20 +2396,74 @@ export default function App() {
                             </button>
                           )}
                         </div>
-                      )}
-                      
-                      {salary.status === 'paid' && (
-                        <p className="muted-copy" style={{ marginTop: "12px" }}>
-                          Paid on {new Date(salary.paidAt).toLocaleDateString("en-IN")}
-                        </p>
-                      )}
-                    </article>
-                  ))
-                ) : (
-                  <div className="task-empty">No salary records found for this period. Click Sync to generate.</div>
-                )}
-              </div>
-            </SectionCard>
+                        
+                        {salary.status === 'paid' && (
+                          <p className="muted-copy" style={{ marginTop: "12px" }}>
+                            Paid on {new Date(salary.paidAt).toLocaleDateString("en-IN")}
+                          </p>
+                        )}
+                      </article>
+                    ))
+                  ) : (
+                    <div className="task-empty">No salary records found for this period. Click Sync to generate.</div>
+                  )}
+                </div>
+              </SectionCard>
+            ) : (
+              // Employee Salary View
+              <SectionCard title="My Salary & Pay Slips" kicker="Personal Payroll">
+                <div className="salary-controls">
+                  <select value={salaryMonth} onChange={(e) => setSalaryMonth(Number(e.target.value))}>
+                    {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                  <select value={salaryYear} onChange={(e) => setSalaryYear(Number(e.target.value))}>
+                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+
+                <div className="salary-card-grid" style={{ marginTop: "24px" }}>
+                  {salaries.length ? (
+                    salaries.map(salary => (
+                      <article key={salary.id} className="project-card">
+                        <div className="project-card-head">
+                          <div>
+                            <p className="kicker">{months.find(m => m.value === salary.month)?.label} {salary.year}</p>
+                            <h3>Pay Slip</h3>
+                          </div>
+                          <span className={`task-badge status-${salary.status}`}>
+                            {salary.status.toUpperCase()}
+                          </span>
+                        </div>
+                        
+                        <div className="project-block">
+                          <strong>Days Logged & Base Wage</strong>
+                          <p>{salary.workUnits} days @ {currency(salary.dailyWage)} = {currency(salary.baseAmount)}</p>
+                        </div>
+                        
+                        <div className="project-block">
+                          <strong>Adjustments</strong>
+                          <p>Bonus: {currency(salary.bonus || 0)} | Deductions: {currency(salary.deduction || 0)}</p>
+                        </div>
+
+                        <div className="salary-total-row">
+                          <span>Net Payable</span>
+                          <strong>{currency(salary.finalAmount)}</strong>
+                        </div>
+                        
+                        {salary.status === 'paid' && (
+                          <div className="project-block" style={{ marginTop: "12px", borderTop: "1px solid var(--border)", paddingTop: "12px" }}>
+                            <strong>Paid On</strong>
+                            <p>{new Date(salary.paidAt).toLocaleDateString("en-IN")}</p>
+                          </div>
+                        )}
+                      </article>
+                    ))
+                  ) : (
+                    <div className="task-empty">No salary records generated for this period yet. Check back later.</div>
+                  )}
+                </div>
+              </SectionCard>
+            )}
           </div>
         ) : null}
 
@@ -2778,6 +2837,62 @@ export default function App() {
                   onDelete={(id) => handleAction("DELETE", `/staff-tracking/complaints/${id}`)}
                 />
               </SectionCard>
+            ) : null}
+
+            {staffTrackingView === "my-stats" ? (
+              <div className="analytics-card">
+                <div className="analytics-card-head">
+                  <div>
+                    <p className="kicker">Personal Summary</p>
+                    <h3>My Stats</h3>
+                  </div>
+                </div>
+                
+                <section className="stat-grid" style={{ marginBottom: "24px" }}>
+                  <div className="stat-card">
+                    <span>Days Worked This Month</span>
+                    <strong>{visibleAttendanceRows.filter(r => r.date.startsWith(new Date().toISOString().slice(0, 7))).length}</strong>
+                  </div>
+                  <div className="stat-card">
+                    <span>My Open Doubts</span>
+                    <strong>{visibleDoubtRows.filter(r => r.status !== 'Resolved').length}</strong>
+                  </div>
+                  <div className="stat-card accent">
+                    <span>My Open Complaints</span>
+                    <strong>{visibleComplaintRows.filter(r => r.status !== 'Resolved').length}</strong>
+                  </div>
+                </section>
+                
+                <div className="project-card-grid">
+                  <article className="project-card">
+                    <div className="project-card-head">
+                      <div>
+                        <p className="kicker">Today's Attendance</p>
+                        <h3>{todayAttendanceRecord ? todayAttendanceRecord.status : "Not Logged Yet"}</h3>
+                      </div>
+                      <span className={`task-badge ${todayAttendanceRecord ? (todayAttendanceRecord.checkOut ? "status-paid" : "status-in-progress") : "status-todo"}`}>
+                        {todayAttendanceRecord ? (todayAttendanceRecord.checkOut ? "COMPLETED" : "IN PROGRESS") : "PENDING"}
+                      </span>
+                    </div>
+                    {todayAttendanceRecord && (
+                      <>
+                        <div className="project-block">
+                          <strong>Check In</strong>
+                          <p>{todayAttendanceRecord.checkIn}</p>
+                        </div>
+                        <div className="project-block">
+                          <strong>Check Out</strong>
+                          <p>{todayAttendanceRecord.checkOut || "---"}</p>
+                        </div>
+                        <div className="project-block">
+                          <strong>Worked Hours</strong>
+                          <p>{todayAttendanceRecord.workedDuration || "---"}</p>
+                        </div>
+                      </>
+                    )}
+                  </article>
+                </div>
+              </div>
             ) : null}
           </div>
         ) : null}

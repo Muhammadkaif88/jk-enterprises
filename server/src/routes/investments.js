@@ -13,7 +13,7 @@ investmentsRouter.get("/", authorize("technician"), (req, res) => {
   const now = new Date();
   const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
   const currentMonthFinance = db.finance.filter(f => 
-    f.companyId === Number(companyId) && 
+    (companyId === "all" || f.companyId === Number(companyId)) && 
     (f.createdAt || "").startsWith(currentMonthStr)
   );
   
