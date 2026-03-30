@@ -16,6 +16,8 @@ function buildUserAccount(member, password) {
     staffCategory: member.staffCategory,
     companyId: member.companyId,
     companyName: member.companyName,
+    secondaryCompanyId: member.secondaryCompanyId || null,
+    secondaryCompanyName: member.secondaryCompanyName || "",
     approvalStatus: "approved",
     approvedAt: new Date().toISOString(),
     approvedBy: "Admin"
@@ -32,6 +34,7 @@ teamRouter.get("/", authorize("technician"), (req, res) => {
 teamRouter.post("/", authorize("admin"), (req, res) => {
   const db = readDb();
   const company = resolveCompany(db, req.body.companyId);
+  const secondaryCompany = req.body.secondaryCompanyId ? resolveCompany(db, req.body.secondaryCompanyId) : null;
   if (!company) {
     return res.status(400).json({ message: "Select a valid company before adding staff." });
   }
@@ -53,6 +56,8 @@ teamRouter.post("/", authorize("admin"), (req, res) => {
     phone: req.body.phone || "",
     role: req.body.role || "technician",
     staffCategory: req.body.staffCategory || "",
+    secondaryCompanyId: secondaryCompany && secondaryCompany.id !== company.id ? secondaryCompany.id : null,
+    secondaryCompanyName: secondaryCompany && secondaryCompany.id !== company.id ? secondaryCompany.name : "",
     expertise: req.body.expertise || "",
     attendanceStatus: "Pending Assignment",
     assignedTask: req.body.assignedTask || "",
@@ -70,6 +75,7 @@ teamRouter.post("/", authorize("admin"), (req, res) => {
 teamRouter.put("/:id", authorize("manager"), (req, res) => {
   const db = readDb();
   const member = db.staff.find((entry) => entry.id === Number(req.params.id));
+  const secondaryCompany = req.body.secondaryCompanyId ? resolveCompany(db, req.body.secondaryCompanyId) : null;
   if (!member) {
     return res.status(404).json({ message: "Staff member not found." });
   }
@@ -80,6 +86,18 @@ teamRouter.put("/:id", authorize("manager"), (req, res) => {
     phone: req.body.phone ?? member.phone,
     role: req.body.role ?? member.role,
     staffCategory: req.body.staffCategory ?? member.staffCategory,
+    secondaryCompanyId:
+      req.body.secondaryCompanyId !== undefined
+        ? secondaryCompany && secondaryCompany.id !== Number(member.companyId)
+          ? secondaryCompany.id
+          : null
+        : member.secondaryCompanyId || null,
+    secondaryCompanyName:
+      req.body.secondaryCompanyId !== undefined
+        ? secondaryCompany && secondaryCompany.id !== Number(member.companyId)
+          ? secondaryCompany.name
+          : ""
+        : member.secondaryCompanyName || "",
     expertise: req.body.expertise ?? member.expertise,
     assignedTask: req.body.assignedTask ?? member.assignedTask,
     dailyWage: req.body.dailyWage !== undefined ? Number(req.body.dailyWage) : (req.body.salary !== undefined ? Number(req.body.salary) : member.dailyWage)
@@ -97,6 +115,8 @@ teamRouter.put("/:id", authorize("manager"), (req, res) => {
       staffCategory: member.staffCategory,
       companyId: member.companyId,
       companyName: member.companyName,
+      secondaryCompanyId: member.secondaryCompanyId || null,
+      secondaryCompanyName: member.secondaryCompanyName || "",
       ...(req.body.password ? { password: req.body.password } : {})
     });
   }

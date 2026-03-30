@@ -230,6 +230,8 @@ function normalizeStaff(entry) {
   return withCompany({
     staffCategory: "",
     phone: "",
+    secondaryCompanyId: null,
+    secondaryCompanyName: "",
     dailyWage: entry.dailyWage || Math.round((entry.salary || 0) / 22),
     ...entry
   });
@@ -258,6 +260,8 @@ function normalizeUser(user) {
     approvalStatus: "approved",
     staffCategory: "",
     phone: "",
+    secondaryCompanyId: null,
+    secondaryCompanyName: "",
     approvedAt: null,
     approvedBy: null,
     rejectedAt: null,
@@ -276,6 +280,11 @@ function normalizeUser(user) {
 
   return {
     ...normalizedUser,
+    secondaryCompanyId: baseUser.secondaryCompanyId ? Number(baseUser.secondaryCompanyId) : null,
+    secondaryCompanyName:
+      baseUser.secondaryCompanyId && currentCompanies.some((entry) => entry.id === Number(baseUser.secondaryCompanyId))
+        ? getCompanyMeta(baseUser.secondaryCompanyId).name
+        : baseUser.secondaryCompanyName || "",
     approvalStatus: normalizedUser.approvalStatus || "approved"
   };
 }

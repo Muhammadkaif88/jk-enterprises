@@ -691,6 +691,11 @@ export default function App() {
   const staffCategory = user?.staffCategory || "";
   const isAdmin = role === "admin";
   const isInvestor = role === "investor" || staffCategory === "Investor";
+  const accessibleCompanyIds = useMemo(
+    () =>
+      [...new Set([user?.companyId, user?.secondaryCompanyId].map((value) => Number(value)).filter(Boolean))],
+    [user?.companyId, user?.secondaryCompanyId]
+  );
   const canManagePeople = ["admin", "manager"].includes(role);
   const requestRole = !isAdmin && staffCategory === "Account Staff" ? "manager" : role;
   const accessProfileKey = isAdmin ? "admin" : role === "manager" ? "manager" : isInvestor ? "Investor" : staffCategory || "technician";
@@ -704,7 +709,7 @@ export default function App() {
   );
   const availableCompanies = isAdmin
     ? companies
-    : companies.filter((company) => Number(company.id) === Number(user?.companyId));
+    : companies.filter((company) => accessibleCompanyIds.includes(Number(company.id)));
   const showCompanyColumn = selectedCompany === "all";
   const selectedCompanyInfo = useMemo(
     () => companies.find((entry) => Number(entry.id) === Number(selectedCompany)) || null,
@@ -958,15 +963,41 @@ export default function App() {
   }, [requestRole, selectedCompany, token]);
 
   useEffect(() => {
-    if (!isAdmin && user?.companyId && selectedCompany !== String(user.companyId)) {
-      setSelectedCompany(String(user.companyId));
+    if (!isAdmin && accessibleCompanyIds.length && !accessibleCompanyIds.includes(Number(selectedCompany))) {
+      setSelectedCompany(String(accessibleCompanyIds[0]));
       return;
     }
 
     if (!visibleSections.some((section) => section.id === activeSection)) {
       setActiveSection(visibleSections[0]?.id || "notes");
     }
-  }, [activeSection, isAdmin, selectedCompany, user?.companyId, visibleSections]);
+  }, [accessibleCompanyIds, activeSection, isAdmin, selectedCompany, visibleSections]);
+
+  useEffect(() => {
+    if (!currentStaffMember || !user?.email || currentStaffMember.email !== user.email) {
+      return;
+    }
+
+    const nextUser = {
+      ...user,
+      companyId: currentStaffMember.companyId ?? user.companyId,
+      companyName: currentStaffMember.companyName ?? user.companyName,
+      secondaryCompanyId: currentStaffMember.secondaryCompanyId ?? null,
+      secondaryCompanyName: currentStaffMember.secondaryCompanyName ?? ""
+    };
+
+    if (
+      nextUser.companyId === user.companyId &&
+      nextUser.companyName === user.companyName &&
+      nextUser.secondaryCompanyId === user.secondaryCompanyId &&
+      nextUser.secondaryCompanyName === user.secondaryCompanyName
+    ) {
+      return;
+    }
+
+    setUser(nextUser);
+    localStorage.setItem("user", JSON.stringify(nextUser));
+  }, [currentStaffMember, user]);
 
   const projectRows = useMemo(
     () =>
@@ -2660,6 +2691,12 @@ export default function App() {
                       </option>
                     ))}
                   </select>
+                  <select name="secondaryCompanyId" defaultValue="">
+                    <option value="">No extra company access</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>{company.name}</option>
+                    ))}
+                  </select>
                   {isAdmin ? (
                     <select name="companyId" required defaultValue="">
                       <option value="" disabled>Select company</option>
@@ -2683,6 +2720,16 @@ export default function App() {
                   ...(isAdmin ? [{ key: "phone", label: "Phone" }] : []),
                   ...(isAdmin ? [{ key: "role", label: "Role", options: teamRoleOptions }] : []),
                   { key: "staffCategory", label: "Category", options: employeeCategoryOptions },
+                  ...(isAdmin
+                    ? [
+                        {
+                          key: "secondaryCompanyId",
+                          label: "Extra Access",
+                          options: [{ value: "", label: "No extra access" }, ...companies.map((company) => ({ value: String(company.id), label: company.name }))],
+                          render: (row) => row.secondaryCompanyName || "No extra access"
+                        }
+                      ]
+                    : []),
                   { key: "dailyWage", label: "Daily Wage", type: "number", render: (row) => currency(row.dailyWage), editable: isAdmin },
                   { key: "attendanceStatus", label: "Current Status", editable: false }
                 ]}
