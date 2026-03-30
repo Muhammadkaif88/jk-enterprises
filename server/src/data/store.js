@@ -16,16 +16,42 @@ const seedData = {
   companies: [
     {
       id: 1,
-      name: "JK Enterprises",
-      code: "jk-enterprises",
-      address: "Enter Company Address Here",
-      phone: "+91 00000 00000",
-      email: "contact@jkenterprises.local",
-      bankName: "",
-      accountNumber: "",
-      ifsc: "",
-      upiId: "",
-      totalValuation: 0
+      name: "Edukkit",
+      code: "edukkit",
+      address: "Raihsoft Technologies, 1st Floor Pandikkad, Malappuram, Kerala 676521, India",
+      phone: "+91 90370 65029",
+      email: "edukkitofficial@gmail.com",
+      bankName: "Kotak811 Bank",
+      accountNumber: "7049752112",
+      ifsc: "KKBK0009308",
+      upiId: "8075100930@kotak811",
+      totalValuation: 10000000
+    },
+    {
+      id: 2,
+      name: "3D.Objex",
+      code: "3d-objex",
+      address: "Prototype Service Studio, Malappuram, Kerala",
+      phone: "+91 80751 00930",
+      email: "sales@3dobjex.local",
+      bankName: "Kotak811 Bank",
+      accountNumber: "7049752112",
+      ifsc: "KKBK0009308",
+      upiId: "8075100930@kotak811",
+      totalValuation: 5000000
+    },
+    {
+      id: 3,
+      name: "Qisa Cafe",
+      code: "qisa-cafe",
+      address: "Qisa Cafe, Malappuram, Kerala",
+      phone: "+91 80751 00930",
+      email: "hello@qisacafe.local",
+      bankName: "Kotak811 Bank",
+      accountNumber: "7049752112",
+      ifsc: "KKBK0009308",
+      upiId: "8075100930@kotak811",
+      totalValuation: 2000000
     }
   ],
   staff: [
@@ -36,7 +62,7 @@ const seedData = {
       role: "admin",
       staffCategory: "Owner",
       companyId: 1,
-      companyName: "JK Enterprises",
+      companyName: "Edukkit",
       expertise: "Management",
       attendanceStatus: "Present",
       assignedTask: "Executive oversight",
@@ -62,7 +88,7 @@ const seedData = {
       role: "admin",
       fullName: "Muhammed Kaif",
       companyId: 1,
-      companyName: "JK Enterprises",
+      companyName: "Edukkit",
       approvalStatus: "approved",
       approvedAt: new Date().toISOString(),
       approvedBy: "System"

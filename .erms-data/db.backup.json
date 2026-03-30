@@ -1,17 +1,43 @@
 {
   "companies": [
     {
-      "totalValuation": 0,
+      "totalValuation": 10000000,
       "id": 1,
-      "name": "JK Enterprises",
-      "code": "jk-enterprises",
-      "address": "Enter Company Address Here",
-      "phone": "+91 00000 00000",
-      "email": "contact@jkenterprises.local",
-      "bankName": "",
-      "accountNumber": "",
-      "ifsc": "",
-      "upiId": ""
+      "name": "Edukkit",
+      "code": "edukkit",
+      "address": "Raihsoft Technologies, 1st Floor Pandikkad, Malappuram, Kerala 676521, India",
+      "phone": "+91 90370 65029",
+      "email": "edukkitofficial@gmail.com",
+      "bankName": "Kotak811 Bank",
+      "accountNumber": "7049752112",
+      "ifsc": "KKBK0009308",
+      "upiId": "8075100930@kotak811"
+    },
+    {
+      "totalValuation": 5000000,
+      "id": 2,
+      "name": "3D.Objex",
+      "code": "3d-objex",
+      "address": "Prototype Service Studio, Malappuram, Kerala",
+      "phone": "+91 80751 00930",
+      "email": "sales@3dobjex.local",
+      "bankName": "Kotak811 Bank",
+      "accountNumber": "7049752112",
+      "ifsc": "KKBK0009308",
+      "upiId": "8075100930@kotak811"
+    },
+    {
+      "totalValuation": 2000000,
+      "id": 3,
+      "name": "Qisa Cafe",
+      "code": "qisa-cafe",
+      "address": "Qisa Cafe, Malappuram, Kerala",
+      "phone": "+91 80751 00930",
+      "email": "hello@qisacafe.local",
+      "bankName": "Kotak811 Bank",
+      "accountNumber": "7049752112",
+      "ifsc": "KKBK0009308",
+      "upiId": "8075100930@kotak811"
     }
   ],
   "staff": [
@@ -24,7 +50,7 @@
       "email": "owner@jkcompy.local",
       "role": "admin",
       "companyId": 1,
-      "companyName": "JK Enterprises",
+      "companyName": "Edukkit",
       "expertise": "Management",
       "attendanceStatus": "Present",
       "assignedTask": "Executive oversight",
@@ -47,7 +73,7 @@
       "approvalStatus": "approved",
       "staffCategory": "",
       "phone": "",
-      "approvedAt": "2026-03-30T04:48:36.099Z",
+      "approvedAt": "2026-03-30T05:12:37.877Z",
       "approvedBy": "System",
       "rejectedAt": null,
       "rejectedBy": null,
@@ -57,7 +83,7 @@
       "role": "admin",
       "fullName": "Muhammed Kaif",
       "companyId": 1,
-      "companyName": "JK Enterprises"
+      "companyName": "Edukkit"
     }
   ],
   "investorTransactions": []
