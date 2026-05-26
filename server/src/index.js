@@ -29,6 +29,21 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+// Database initialization middleware for serverless environment
+let isDbInitialized = false;
+app.use(async (req, res, next) => {
+  try {
+    if (!isDbInitialized) {
+      await initDb();
+      isDbInitialized = true;
+    }
+    next();
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
+    next(err);
+  }
+});
+
 app.use("/api/overview", overviewRouter);
 app.use("/api/inventory", inventoryRouter);
 app.use("/api/finance", financeRouter);
@@ -87,18 +102,11 @@ function runAutoCleanup() {
 // Schedule cleanup every 24 hours
 setInterval(runAutoCleanup, 24 * 60 * 60 * 1000);
 
-async function start() {
-  try {
-    await initDb();
-    // Run cleanup on server startup
-    runAutoCleanup();
-    app.listen(port, () => {
-      console.log(`ERMS API listening on http://localhost:${port}`);
-    });
-  } catch (err) {
-    console.error("Failed to start ERMS API server:", err);
-    process.exit(1);
-  }
+if (!process.env.VERCEL) {
+  // Only listen on TCP port if running locally (not in serverless environment)
+  app.listen(port, () => {
+    console.log(`ERMS API listening on http://localhost:${port}`);
+  });
 }
 
-start();
+export default app;
