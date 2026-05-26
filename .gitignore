@@ -1,3 +1,7 @@
 node_modules/
 client/dist/
+client/build/
 server/src/data/db.json
+.env
+.env.*
+.erms-data/
