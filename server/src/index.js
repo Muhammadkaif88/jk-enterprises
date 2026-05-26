@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { overviewRouter } from "./routes/overview.js";
@@ -15,7 +16,7 @@ import { investmentsRouter } from "./routes/investments.js";
 import { recycleBinRouter } from "./routes/recycleBin.js";
 import { adminRouter } from "./routes/admin.js";
 import { salaryRouter } from "./routes/salary.js";
-import { readDb, writeDb } from "./data/store.js";
+import { readDb, writeDb, initDb } from "./data/store.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -86,9 +87,18 @@ function runAutoCleanup() {
 // Schedule cleanup every 24 hours
 setInterval(runAutoCleanup, 24 * 60 * 60 * 1000);
 
-// Run cleanup on server startup
-runAutoCleanup();
+async function start() {
+  try {
+    await initDb();
+    // Run cleanup on server startup
+    runAutoCleanup();
+    app.listen(port, () => {
+      console.log(`ERMS API listening on http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error("Failed to start ERMS API server:", err);
+    process.exit(1);
+  }
+}
 
-app.listen(port, () => {
-  console.log(`ERMS API listening on http://localhost:${port}`);
-});
+start();

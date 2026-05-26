@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createClient } from "@supabase/supabase-js";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(moduleDir, "../../..");
@@ -11,6 +13,27 @@ const legacyDbPaths = [
   path.join(moduleDir, "db.json"),
   path.join(projectRoot, "src/data/db.json")
 ];
+
+// Initialize Supabase Client
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = (supabaseUrl && supabaseServiceRoleKey)
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false }
+    })
+  : null;
+
+// Initialize Cloudflare R2 Client (S3 compatible)
+const r2Client = (process.env.CLOUDFLARE_R2_ENDPOINT && process.env.CLOUDFLARE_R2_ACCESS_KEY_ID && process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY)
+  ? new S3Client({
+      endpoint: process.env.CLOUDFLARE_R2_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+      },
+      region: "auto",
+    })
+  : null;
 
 const seedData = {
   companies: [
@@ -435,57 +458,186 @@ function ensureDb() {
 let cachedDb = null;
 let dbLastRead = 0;
 
-export function readDb() {
-  ensureDb();
-  try {
-    const stats = fs.statSync(dbPath);
-    if (cachedDb && stats.mtimeMs <= dbLastRead) {
-      return cachedDb;
+// Recursive function to search and upload base64 image/file attachments to R2
+async function processBase64Uploads(obj) {
+  if (!obj || typeof obj !== "object") {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      obj[i] = await processBase64Uploads(obj[i]);
     }
+    return obj;
+  }
+
+  // If this object is an attachment with a base64 dataUrl
+  if (obj.dataUrl && typeof obj.dataUrl === "string" && obj.dataUrl.startsWith("data:")) {
+    try {
+      obj.dataUrl = await uploadBase64ToR2(obj.dataUrl, obj.name);
+    } catch (err) {
+      console.error(`Failed to upload ${obj.name || "file"} to Cloudflare R2:`, err);
+    }
+  }
+
+  // Recurse into other properties
+  for (const key of Object.keys(obj)) {
+    if (key !== "dataUrl") {
+      obj[key] = await processBase64Uploads(obj[key]);
+    }
+  }
+
+  return obj;
+}
+
+// Upload a single base64 data url file to R2
+async function uploadBase64ToR2(base64Str, fileName) {
+  if (!r2Client) {
+    console.warn("Cloudflare R2 is not configured. Base64 file will be stored in database.");
+    return base64Str;
+  }
+
+  const match = base64Str.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return base64Str;
+
+  const contentType = match[1];
+  const base64Data = match[2];
+  const buffer = Buffer.from(base64Data, "base64");
+
+  // Create unique key
+  const cleanFileName = (fileName || "file").replace(/[^a-zA-Z0-9.-]/g, "_");
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${cleanFileName}`;
+
+  const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME;
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: bucketName,
+      Key: uniqueName,
+      Body: buffer,
+      ContentType: contentType,
+    })
+  );
+
+  let publicUrlBase = process.env.CLOUDFLARE_R2_PUBLIC_URL;
+  if (!publicUrlBase) {
+    publicUrlBase = `${process.env.CLOUDFLARE_R2_ENDPOINT}/${bucketName}`;
+  }
+
+  const separator = publicUrlBase.endsWith("/") ? "" : "/";
+  return `${publicUrlBase}${separator}${uniqueName}`;
+}
+
+async function saveDbToSupabase(data) {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from("erms_db")
+    .upsert({ id: 1, data });
+  if (error) {
+    throw error;
+  }
+}
+
+export async function initDb() {
+  if (!supabase) {
+    console.log("Supabase is not configured. Using local JSON store.");
+    ensureDb();
     const raw = fs.readFileSync(dbPath, "utf-8");
     cachedDb = normalizeDb(JSON.parse(raw));
-    dbLastRead = stats.mtimeMs;
+    dbLastRead = Date.now();
     return cachedDb;
-  } catch (err) {
-    console.error("Error reading database:", err);
-    try {
-      if (fs.existsSync(backupDbPath)) {
-        const backupData = normalizeDb(readRawDbFile(backupDbPath));
-        persistDbSnapshot(dbPath, backupData);
-        cachedDb = backupData;
-        dbLastRead = fs.statSync(dbPath).mtimeMs;
-        return backupData;
-      }
-
-      const legacySource = pickLatestExistingPath(legacyDbPaths);
-      if (legacySource) {
-        const legacyData = normalizeDb(readRawDbFile(legacySource));
-        persistDbSnapshot(dbPath, legacyData);
-        fs.copyFileSync(dbPath, backupDbPath);
-        cachedDb = legacyData;
-        dbLastRead = fs.statSync(dbPath).mtimeMs;
-        return legacyData;
-      }
-    } catch (recoveryError) {
-      console.error("Error recovering database:", recoveryError);
-    }
-
-    const safeSeed = normalizeDb(seedData);
-    persistDbSnapshot(dbPath, safeSeed);
-    fs.copyFileSync(dbPath, backupDbPath);
-    return safeSeed;
   }
+
+  try {
+    console.log("Fetching database state from Supabase...");
+    const { data, error } = await supabase
+      .from("erms_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        // Record not found, initialize with local/seed data
+        console.log("No existing database row found in Supabase. Seeding from local file...");
+        ensureDb();
+        const raw = fs.readFileSync(dbPath, "utf-8");
+        const localData = normalizeDb(JSON.parse(raw));
+
+        console.log("Uploading seed database to Supabase...");
+        const { error: insertError } = await supabase
+          .from("erms_db")
+          .upsert({ id: 1, data: localData });
+
+        if (insertError) throw insertError;
+        cachedDb = localData;
+        dbLastRead = Date.now();
+      } else {
+        throw error;
+      }
+    } else {
+      console.log("Successfully loaded database state from Supabase!");
+      cachedDb = normalizeDb(data.data);
+      dbLastRead = Date.now();
+    }
+  } catch (err) {
+    console.error("Failed to load database from Supabase, falling back to local file:", err);
+    ensureDb();
+    const raw = fs.readFileSync(dbPath, "utf-8");
+    cachedDb = normalizeDb(JSON.parse(raw));
+    dbLastRead = Date.now();
+  }
+  return cachedDb;
+}
+
+export function readDb() {
+  if (!cachedDb) {
+    ensureDb();
+    const raw = fs.readFileSync(dbPath, "utf-8");
+    cachedDb = normalizeDb(JSON.parse(raw));
+    dbLastRead = Date.now();
+  }
+  return cachedDb;
 }
 
 export function writeDb(data) {
   try {
     const normalizedData = normalizeDb(data);
-    if (fs.existsSync(dbPath)) {
-      fs.copyFileSync(dbPath, backupDbPath);
-    }
-    persistDbSnapshot(dbPath, normalizedData);
     cachedDb = normalizedData;
-    dbLastRead = fs.statSync(dbPath).mtimeMs;
+    dbLastRead = Date.now();
+
+    // Local file write backup
+    try {
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(dbPath, JSON.stringify(normalizedData, null, 2));
+    } catch (err) {
+      console.error("Failed to write local backup:", err);
+    }
+
+    // Trigger async processing & cloud save
+    (async () => {
+      // 1. Process base64 files and upload to R2
+      const processedData = await processBase64Uploads(normalizedData);
+      cachedDb = processedData;
+
+      // Local write updated backup
+      try {
+        fs.writeFileSync(dbPath, JSON.stringify(processedData, null, 2));
+      } catch (err) {
+        console.error("Failed to write local processed backup:", err);
+      }
+
+      // 2. Upload to Supabase database
+      if (supabase) {
+        await saveDbToSupabase(processedData);
+        console.log("Database state synced with Supabase successfully.");
+      }
+    })().catch((err) => {
+      console.error("Background database save error:", err);
+    });
+
     return normalizedData;
   } catch (err) {
     console.error("Error writing database:", err);
