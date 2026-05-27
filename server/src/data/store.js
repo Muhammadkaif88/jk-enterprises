@@ -600,6 +600,8 @@ export function readDb() {
   return cachedDb;
 }
 
+export let pendingWrites = [];
+
 export function writeDb(data) {
   try {
     const normalizedData = normalizeDb(data);
@@ -617,7 +619,7 @@ export function writeDb(data) {
     }
 
     // Trigger async processing & cloud save
-    (async () => {
+    const writePromise = (async () => {
       // 1. Process base64 files and upload to R2
       const processedData = await processBase64Uploads(normalizedData);
       cachedDb = processedData;
@@ -634,8 +636,14 @@ export function writeDb(data) {
         await saveDbToSupabase(processedData);
         console.log("Database state synced with Supabase successfully.");
       }
-    })().catch((err) => {
-      console.error("Background database save error:", err);
+    })();
+
+    pendingWrites.push(writePromise);
+    writePromise.finally(() => {
+      const idx = pendingWrites.indexOf(writePromise);
+      if (idx !== -1) {
+        pendingWrites.splice(idx, 1);
+      }
     });
 
     return normalizedData;

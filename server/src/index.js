@@ -16,7 +16,7 @@ import { investmentsRouter } from "./routes/investments.js";
 import { recycleBinRouter } from "./routes/recycleBin.js";
 import { adminRouter } from "./routes/admin.js";
 import { salaryRouter } from "./routes/salary.js";
-import { readDb, writeDb, initDb } from "./data/store.js";
+import { readDb, writeDb, initDb, pendingWrites } from "./data/store.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -24,6 +24,36 @@ const port = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// Middleware to await pending database writes before sending response in serverless environments
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  const originalSend = res.send;
+
+  res.json = async function (body) {
+    if (pendingWrites.length > 0) {
+      try {
+        await Promise.all(pendingWrites);
+      } catch (err) {
+        console.error("Error waiting for pending writes in res.json:", err);
+      }
+    }
+    return originalJson.call(this, body);
+  };
+
+  res.send = async function (body) {
+    if (pendingWrites.length > 0) {
+      try {
+        await Promise.all(pendingWrites);
+      } catch (err) {
+        console.error("Error waiting for pending writes in res.send:", err);
+      }
+    }
+    return originalSend.call(this, body);
+  };
+
+  next();
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
