@@ -60,13 +60,10 @@ app.get("/api/health", (_req, res) => {
 });
 
 // Database initialization middleware for serverless environment
-let isDbInitialized = false;
 app.use(async (req, res, next) => {
   try {
-    if (!isDbInitialized) {
-      await initDb();
-      isDbInitialized = true;
-    }
+    const forceRefresh = req.method !== "GET";
+    await initDb(forceRefresh);
     next();
   } catch (err) {
     console.error("Failed to initialize database:", err);

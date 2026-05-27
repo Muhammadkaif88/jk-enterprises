@@ -457,6 +457,9 @@ function ensureDb() {
 
 let cachedDb = null;
 let dbLastRead = 0;
+let activeInitPromise = null;
+const CACHE_TTL_MS = 2000; // 2 seconds
+
 
 // Recursive function to search and upload base64 image/file attachments to R2
 async function processBase64Uploads(obj) {
@@ -538,56 +541,73 @@ async function saveDbToSupabase(data) {
   }
 }
 
-export async function initDb() {
-  if (!supabase) {
-    console.log("Supabase is not configured. Using local JSON store.");
-    ensureDb();
-    const raw = fs.readFileSync(dbPath, "utf-8");
-    cachedDb = normalizeDb(JSON.parse(raw));
-    dbLastRead = Date.now();
+export async function initDb(force = false) {
+  const now = Date.now();
+  
+  // If a fetch is already in progress and we are not forcing a refresh, await and return it
+  if (activeInitPromise && !force) {
+    return activeInitPromise;
+  }
+
+  // If cache is fresh and we are not forcing a refresh, return cached state
+  if (cachedDb && !force && (now - dbLastRead < CACHE_TTL_MS)) {
     return cachedDb;
   }
 
-  try {
-    console.log("Fetching database state from Supabase...");
-    const { data, error } = await supabase
-      .from("erms_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        // Record not found, initialize with local/seed data
-        console.log("No existing database row found in Supabase. Seeding from local file...");
+  activeInitPromise = (async () => {
+    try {
+      if (!supabase) {
+        console.log("Supabase is not configured. Using local JSON store.");
         ensureDb();
         const raw = fs.readFileSync(dbPath, "utf-8");
-        const localData = normalizeDb(JSON.parse(raw));
-
-        console.log("Uploading seed database to Supabase...");
-        const { error: insertError } = await supabase
-          .from("erms_db")
-          .upsert({ id: 1, data: localData });
-
-        if (insertError) throw insertError;
-        cachedDb = localData;
+        cachedDb = normalizeDb(JSON.parse(raw));
         dbLastRead = Date.now();
-      } else {
-        throw error;
+        return cachedDb;
       }
-    } else {
-      console.log("Successfully loaded database state from Supabase!");
-      cachedDb = normalizeDb(data.data);
+
+      console.log("Fetching database state from Supabase...");
+      const { data, error } = await supabase
+        .from("erms_db")
+        .select("data")
+        .eq("id", 1)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          console.log("No existing database row found in Supabase. Seeding from local file...");
+          ensureDb();
+          const raw = fs.readFileSync(dbPath, "utf-8");
+          const localData = normalizeDb(JSON.parse(raw));
+
+          console.log("Uploading seed database to Supabase...");
+          const { error: insertError } = await supabase
+            .from("erms_db")
+            .upsert({ id: 1, data: localData });
+
+          if (insertError) throw insertError;
+          cachedDb = localData;
+          dbLastRead = Date.now();
+        } else {
+          throw error;
+        }
+      } else {
+        console.log("Successfully loaded database state from Supabase!");
+        cachedDb = normalizeDb(data.data);
+        dbLastRead = Date.now();
+      }
+    } catch (err) {
+      console.error("Failed to load database from Supabase, falling back to local file:", err);
+      ensureDb();
+      const raw = fs.readFileSync(dbPath, "utf-8");
+      cachedDb = normalizeDb(JSON.parse(raw));
       dbLastRead = Date.now();
+    } finally {
+      activeInitPromise = null;
     }
-  } catch (err) {
-    console.error("Failed to load database from Supabase, falling back to local file:", err);
-    ensureDb();
-    const raw = fs.readFileSync(dbPath, "utf-8");
-    cachedDb = normalizeDb(JSON.parse(raw));
-    dbLastRead = Date.now();
-  }
-  return cachedDb;
+    return cachedDb;
+  })();
+
+  return activeInitPromise;
 }
 
 export function readDb() {
