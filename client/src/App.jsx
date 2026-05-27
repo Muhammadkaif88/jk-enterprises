@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import RecycleBinSection from "./RecycleBinSection";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+const API_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
+    ? "/api"
+    : "http://localhost:4000/api");
 const sections = [
   { id: "overview", icon: "OV", label: "Overview" },
   { id: "inventory", icon: "IN", label: "Components" },
