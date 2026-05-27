@@ -763,7 +763,7 @@ export default function App() {
   );
 
   async function api(path, options = {}) {
-    const url = new URL(`${API_URL}${path}`);
+    const url = new URL(`${API_URL}${path}`, window.location.origin);
     if (!path.startsWith("/auth") && path !== "/companies") {
       url.searchParams.set("companyId", selectedCompany);
     }
