@@ -515,21 +515,49 @@ function InvestmentSection({
                   handleAction("POST", "/investments", data);
                   e.target.reset();
                 }}>
-                  <input name="investorName" placeholder="Investor Name" required />
-                  <input name="contactNumber" placeholder="Contact Number" />
+                  <div className="form-group">
+                    <label>Investor Name</label>
+                    <input name="investorName" placeholder="Investor Name" required />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Contact Number</label>
+                    <input name="contactNumber" placeholder="Contact Number" />
+                  </div>
+
                   {selectedCompany === "all" ? (
-                    <select name="companyId" required defaultValue="">
-                      <option value="" disabled>Select company</option>
-                      {(companies || []).map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    <div className="form-group">
+                      <label>Company</label>
+                      <select name="companyId" required defaultValue="">
+                        <option value="" disabled>Select company</option>
+                        {(companies || []).map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   ) : null}
-                  <input name="investedFund" type="number" step="0.01" placeholder="Initial Investment Amount" required defaultValue="0" />
-                  <input name="equityPct" type="number" step="0.01" placeholder="Equity Share (%)" required defaultValue="0" />
-                  <input name="investedDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
-                  <input name="notes" placeholder="Onboarding Notes" className="wide" />
-                  <button type="submit">Add Investor</button>
+
+                  <div className="form-group">
+                    <label>Initial Investment Amount (₹)</label>
+                    <input name="investedFund" type="number" step="0.01" placeholder="Initial Investment Amount" required defaultValue="0" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Equity Share (%)</label>
+                    <input name="equityPct" type="number" step="0.01" placeholder="Equity Share (%)" required defaultValue="0" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Investment Date</label>
+                    <input name="investedDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+                  </div>
+
+                  <div className="form-group wide">
+                    <label>Onboarding Notes</label>
+                    <input name="notes" placeholder="Onboarding Notes" />
+                  </div>
+
+                  <button type="submit" style={{ height: "fit-content", alignSelf: "end" }}>Add Investor</button>
                 </form>
               </SectionCard>
             ) : (
@@ -651,6 +679,7 @@ export default function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("user") || "null"));
   const [token, setToken] = useState(() => localStorage.getItem("token"));
   const [activeSection, setActiveSection] = useState("overview");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(() => {
     const savedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -1536,7 +1565,8 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
+        <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>✕</button>
         <div>
           <BrandLogo />
           <p className="brand-eyebrow">JK Enterprises</p>
@@ -1548,7 +1578,10 @@ export default function App() {
             <button
               key={section.id}
               className={activeSection === section.id ? "nav-item active" : "nav-item"}
-              onClick={() => setActiveSection(section.id)}
+              onClick={() => {
+                setActiveSection(section.id);
+                setIsSidebarOpen(false);
+              }}
             >
               {section.label}
             </button>
@@ -1557,7 +1590,7 @@ export default function App() {
 
         <div className="sidebar-footer">
           <p className="sidebar-user">{user.fullName}</p>
-          <button className="nav-item" onClick={handleLogout}>
+          <button className="nav-item" onClick={() => { handleLogout(); setIsSidebarOpen(false); }}>
             Sign Out
           </button>
         </div>
@@ -1565,6 +1598,7 @@ export default function App() {
 
       <main className="main-area">
         <header className="topbar">
+          <button className="sidebar-toggle" onClick={() => setIsSidebarOpen(true)}>☰</button>
           <div>
             <p className="kicker">Authenticated Session</p>
             <h2>{role.toUpperCase()} access</h2>
@@ -1798,27 +1832,50 @@ export default function App() {
                       event.target.reset();
                     }}
                   >
-                    <select name="transactionType" required defaultValue="expense">
-                      <option value="expense">Expense</option>
-                      <option value="income">Income</option>
-                      <option value="purchase">Purchase</option>
-                    </select>
-                    <input name="category" placeholder="Category" required />
-                    <input name="entryDate" type="date" required />
-                    <input name="amount" type="number" placeholder="Amount" required />
-                    <input name="description" placeholder="Description" className="wide" required />
-                    <button type="submit">Log Entry</button>
+                    <div className="form-group">
+                      <label>Transaction Type</label>
+                      <select name="transactionType" required defaultValue="expense">
+                        <option value="expense">Expense</option>
+                        <option value="income">Income</option>
+                        <option value="purchase">Purchase</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Category</label>
+                      <input name="category" placeholder="Category" required />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Transaction Date</label>
+                      <input name="entryDate" type="date" required />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Amount (₹)</label>
+                      <input name="amount" type="number" placeholder="Amount" required />
+                    </div>
+
+                    <div className="form-group wide">
+                      <label>Description</label>
+                      <input name="description" placeholder="Description" required />
+                    </div>
+
+                    <button type="submit" style={{ height: "fit-content", alignSelf: "end" }}>Log Entry</button>
                   </form>
                 ) : (
                   <p className="muted-copy">Investor access is view only. Accounting entries can be created, edited, and deleted only by admin or manager accounts.</p>
                 )}
 
                 <div className="finance-toolbar">
-                  <input
-                    type="date"
-                    value={financeSearchDate}
-                    onChange={(event) => setFinanceSearchDate(event.target.value)}
-                  />
+                  <div className="form-group" style={{ maxWidth: "240px" }}>
+                    <label>Filter by Date</label>
+                    <input
+                      type="date"
+                      value={financeSearchDate}
+                      onChange={(event) => setFinanceSearchDate(event.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <DataTable
@@ -1923,23 +1980,67 @@ export default function App() {
                     event.target.reset();
                   }}
                 >
-                  <input name="customerName" placeholder="Bill to / customer name" required />
-                  <input name="customerPhone" placeholder="Customer phone" />
-                  <input name="invoiceDate" type="date" required />
-                  <input name="dueDate" type="date" />
-                  <input name="billType" placeholder="Bill type" required />
-                  <input name="paymentMethod" defaultValue="Bank / UPI" placeholder="Payment method" />
-                  <select name="status" defaultValue="Draft">
-                    <option value="Draft">Draft</option>
-                    <option value="Sent">Sent</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Overdue">Overdue</option>
-                  </select>
-                  <input name="discount" type="number" placeholder="Discount" />
-                  <input name="paidAmount" type="number" placeholder="Paid amount" />
-                  <textarea name="customerAddress" placeholder="Customer address" className="wide tall" />
-                  <textarea name="description" placeholder="Footer note / thank you note" className="wide tall" />
-                  <button type="submit">Create Printable Bill</button>
+                  <div className="form-group">
+                    <label>Customer Name</label>
+                    <input name="customerName" placeholder="Bill to / customer name" required />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Customer Phone</label>
+                    <input name="customerPhone" placeholder="Customer phone" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Invoice Date (Issue Date)</label>
+                    <input name="invoiceDate" type="date" required />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Due Date</label>
+                    <input name="dueDate" type="date" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Bill Type</label>
+                    <input name="billType" placeholder="Bill type" required />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Payment Method</label>
+                    <input name="paymentMethod" defaultValue="Bank / UPI" placeholder="Payment method" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select name="status" defaultValue="Draft">
+                      <option value="Draft">Draft</option>
+                      <option value="Sent">Sent</option>
+                      <option value="Paid">Paid</option>
+                      <option value="Overdue">Overdue</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Discount (₹)</label>
+                    <input name="discount" type="number" placeholder="Discount" />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Paid Amount (₹)</label>
+                    <input name="paidAmount" type="number" placeholder="Paid amount" />
+                  </div>
+
+                  <div className="form-group wide">
+                    <label>Customer Address</label>
+                    <textarea name="customerAddress" placeholder="Customer address" className="tall" />
+                  </div>
+
+                  <div className="form-group wide">
+                    <label>Footer Note / Thank You Note</label>
+                    <textarea name="description" placeholder="Footer note / thank you note" className="tall" />
+                  </div>
+
+                  <button type="submit" style={{ gridColumn: "1 / -1" }}>Create Printable Bill</button>
                 </form>
 
                 <div className="billing-line-editor">
@@ -3103,33 +3204,66 @@ export default function App() {
                 >
                   <div className="task-form-card">
                     <p className="kicker">Task Define Area</p>
-                    <input name="title" placeholder="Task name" required />
-                    <select name="projectName" defaultValue="">
-                      <option value="">Assign project</option>
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.projectName}>
-                          {project.projectName}
-                        </option>
-                      ))}
-                    </select>
-                    <input name="startDate" type="date" required />
-                    <input name="dueDate" type="date" required />
-                    <select name="priority" defaultValue="High">
-                      <option value="Urgent">Urgent</option>
-                      <option value="High">High</option>
-                      <option value="Low">Low</option>
-                    </select>
-                    <StaffSelect name="assigneeId" team={team} />
-                    <select name="secondaryAssigneeId" defaultValue="">
-                      <option value="">Select second staff (optional)</option>
-                      {team.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {member.fullName}
-                        </option>
-                      ))}
-                    </select>
-                    <textarea name="description" placeholder="Task description" className="task-description-area" required />
-                    <button type="submit">Create Task</button>
+                    
+                    <div className="form-group">
+                      <label>Task Name</label>
+                      <input name="title" placeholder="Task name" required />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Assign Project</label>
+                      <select name="projectName" defaultValue="">
+                        <option value="">Assign project</option>
+                        {projects.map((project) => (
+                          <option key={project.id} value={project.projectName}>
+                            {project.projectName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Start Date (Assign Date)</label>
+                      <input name="startDate" type="date" required />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Due Date (End Date)</label>
+                      <input name="dueDate" type="date" required />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Priority</label>
+                      <select name="priority" defaultValue="High">
+                        <option value="Urgent">Urgent</option>
+                        <option value="High">High</option>
+                        <option value="Low">Low</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Primary Staff</label>
+                      <StaffSelect name="assigneeId" team={team} />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Secondary Staff (Optional)</label>
+                      <select name="secondaryAssigneeId" defaultValue="">
+                        <option value="">Select second staff (optional)</option>
+                        {team.map((member) => (
+                          <option key={member.id} value={member.id}>
+                            {member.fullName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group wide">
+                      <label>Task Description</label>
+                      <textarea name="description" placeholder="Task description" className="task-description-area" required />
+                    </div>
+
+                    <button type="submit" style={{ gridColumn: "1 / -1" }}>Create Task</button>
                   </div>
                 </form>
               ) : null}

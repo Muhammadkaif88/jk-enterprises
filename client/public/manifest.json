@@ -1,0 +1,18 @@
+{
+  "short_name": "JK ERMS",
+  "name": "JK Enterprises ERMS",
+  "description": "Enterprise Resource Management Suite for JK Enterprises",
+  "icons": [
+    {
+      "src": "/pwa_icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#f5efe5",
+  "theme_color": "#c85c2e",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}

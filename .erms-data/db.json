@@ -1,7 +1,6 @@
 {
   "companies": [
     {
-      "totalValuation": 10000000,
       "id": 1,
       "name": "Edukkit",
       "code": "edukkit",
@@ -11,10 +10,10 @@
       "bankName": "Kotak811 Bank",
       "accountNumber": "7049752112",
       "ifsc": "KKBK0009308",
-      "upiId": "8075100930@kotak811"
+      "upiId": "8075100930@kotak811",
+      "totalValuation": 10000000
     },
     {
-      "totalValuation": 5000000,
       "id": 2,
       "name": "3D.Objex",
       "code": "3d-objex",
@@ -24,10 +23,10 @@
       "bankName": "Kotak811 Bank",
       "accountNumber": "7049752112",
       "ifsc": "KKBK0009308",
-      "upiId": "8075100930@kotak811"
+      "upiId": "8075100930@kotak811",
+      "totalValuation": 5000000
     },
     {
-      "totalValuation": 2000000,
       "id": 3,
       "name": "Qisa Cafe",
       "code": "qisa-cafe",
@@ -37,18 +36,17 @@
       "bankName": "Kotak811 Bank",
       "accountNumber": "7049752112",
       "ifsc": "KKBK0009308",
-      "upiId": "8075100930@kotak811"
+      "upiId": "8075100930@kotak811",
+      "totalValuation": 2000000
     }
   ],
   "staff": [
     {
-      "staffCategory": "Owner",
-      "phone": "",
-      "dailyWage": 0,
       "id": 1,
       "fullName": "Muhammed Kaif",
       "email": "owner@jkcompy.local",
       "role": "admin",
+      "staffCategory": "Owner",
       "companyId": 1,
       "companyName": "Edukkit",
       "expertise": "Management",
@@ -70,20 +68,16 @@
   "salaries": [],
   "users": [
     {
-      "approvalStatus": "approved",
-      "staffCategory": "",
-      "phone": "",
-      "approvedAt": "2026-03-30T05:12:37.877Z",
-      "approvedBy": "System",
-      "rejectedAt": null,
-      "rejectedBy": null,
       "id": 1,
       "email": "owner@jkcompy.local",
       "password": "admin",
       "role": "admin",
       "fullName": "Muhammed Kaif",
       "companyId": 1,
-      "companyName": "Edukkit"
+      "companyName": "Edukkit",
+      "approvalStatus": "approved",
+      "approvedAt": "2026-05-27T16:31:14.436Z",
+      "approvedBy": "System"
     }
   ],
   "investorTransactions": []
