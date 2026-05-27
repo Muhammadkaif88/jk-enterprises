@@ -6,7 +6,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(moduleDir, "../../..");
-const dataDir = path.join(projectRoot, ".erms-data");
+const dataDir = process.env.VERCEL ? "/tmp" : path.join(projectRoot, ".erms-data");
 const dbPath = path.join(dataDir, "db.json");
 const backupDbPath = path.join(dataDir, "db.backup.json");
 const legacyDbPaths = [
